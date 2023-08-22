@@ -1,4 +1,4 @@
-function [ffx,ffy] = spreadBS2BS1(F,X,u,v,dx,dy,dX)
+function [ffx,ffy] = spreadBS2BS1(F,X,u,v,dx,dy,ds)
 
 %The goal of this funciton is to spread forces on the Lagrangian structure
 %to the Eulerian grid
@@ -7,7 +7,7 @@ NIB = length(X(:,1));
 [rv,cv] = size(v);
 ffx = zeros(ru,cu);
 ffy = zeros(rv,cv);
-C = dX/(dx*dy);
+C = (ds)/(dx*dy);
 
 for k = 1:NIB
    sxx = X(k,1)/dx;

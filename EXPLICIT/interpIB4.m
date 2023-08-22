@@ -1,4 +1,4 @@
-function [U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X,dx,dy)
+function [U,V,i1x,j1x,i1y,j1y] = interpIB4(u,v,X,dx,dy)
 %Right now doing this for the BSpline2,3 couple. Other kernels will be
 %incorporated later
 
@@ -14,8 +14,8 @@ V = zeros(NIB,1);
 
 for k = 1:NIB
    sxx = X(k,1)/dx;
-   syx = X(k,2)/dy + 1/2; %Need to add 1/2 to account for the staggering of the grid
-   sxy = X(k,1)/dx + 1/2;
+   syx = X(k,2)/dy - 1/2; %Need to add 1/2 to account for the staggering of the grid
+   sxy = X(k,1)/dx - 1/2;
    syy = X(k,2)/dy;
    sx = [sxx,syx];
    sy = [sxy,syy];

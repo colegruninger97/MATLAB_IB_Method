@@ -1,5 +1,5 @@
 function w = BS_3x(r)
-%Implementation of the BSpline1 kernel function.
+
 
 %Input parameters
 % r is the argument of the desired BSpline kernel

@@ -36,7 +36,7 @@ xx_centd = xx_cent(1:4:end,1:4:end);
 yy_centd = yy_cent(1:4:end,1:4:end);
 
 
-mfac = 4.0;
+mfac = 3.0;
 %Specify the Lagrangian mesh spacing
 dX = mfac*dx;
 l = length(0:dX:2*pi-dX);
@@ -76,7 +76,7 @@ t = 0;
 
 while(t < 30*dt)
     %tic
-[u,v,p,F1,F2,LHS,D] = BE_IB_Evolve_Periodic(u,v,p,F1,F2,dt,dx,dy,N,NIB,mu,rho,kappa,mfac,x,y,X);
+[u,v,p,F1,F2,LHS] = BE_IB_Evolve_Periodic(u,v,p,F1,F2,dt,dx,dy,N,NIB,mu,rho,kappa,mfac,x,y,X);
 %Plot the vector field 
 uce = 0.5.*(u(:,2:end) + u(:,1:end-1));
 vce = 0.5.*(v(2:end,:) + v(1:end-1,:));

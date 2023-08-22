@@ -1,4 +1,5 @@
-%Integral to check order of magnitude of the erros of the IB method
+%Integral to check order of magnitude of the erros of the IB method (this
+%is in 2D)
 sig = tan(pi/6);
 X_s = 1.0;
 Y_s = sig*X_s;

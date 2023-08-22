@@ -1,4 +1,4 @@
-function [u_new,v_new,p_new,F1_new,F2_new,LHS,D] = BE_IB_Evolve_Periodic(u,v,p,F1,F2,dt,dx,dy,N,NIB,mu,rho,kappa,mfac,x,y,X)
+function [u_new,v_new,p_new,F1_new,F2_new,LHS] = BE_IB_Evolve_Periodic(u,v,p,F1,F2,dt,dx,dy,N,NIB,mu,rho,kappa,mfac,x,y,X)
 
 %Build matrices used for the left hand side of the equation
 [u_g,v_g] = Ghostnodesside_periodic(u,v);
@@ -190,8 +190,7 @@ RHS = [A1*u(:) - Conv_u(:);...
     N7(:);
     F1(:);
     F2(:)];
- LHS = eye(size(LHS))*LHS;
-  [V,D] = eig(LHS);
+% [V,D] = eig(LHS);
 % rank(LHS)
 % PP = null(LHS);
 %Use the black box... 

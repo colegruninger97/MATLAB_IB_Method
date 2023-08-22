@@ -27,9 +27,9 @@ Px = -0.5;
 [xx_sidex,yy_sidex] = meshgrid(x,y_c);
 [xx_sidey,yy_sidey] = meshgrid(x_c,y);
 %Use Taylor vortices as the analytic solution
- u_exact = @(x,y,t) 0.*(1+2*exp(-8.*pi.*pi.*(mu/rho).*t).*sin(2*pi*(y-t)).*cos(2*pi*(x-t)));
- v_exact = @(x,y,t) 0.*(1-2*exp(-8.*pi.*pi.*((mu)./rho).*t).*cos(2.*pi.*(y-t)).*sin(2.*pi.*(x-t)));
- p_exact = @(x,y,t) 0.*(-exp(-16*pi*pi*((mu)/rho).*t).*(cos(4*pi*(x-t))+cos(4*pi.*(y-t))));
+ u_exact = @(x,y,t) (1+2*exp(-8.*pi.*pi.*(mu/rho).*t).*sin(2*pi*(y-t)).*cos(2*pi*(x-t)));
+ v_exact = @(x,y,t) (1-2*exp(-8.*pi.*pi.*((mu)./rho).*t).*cos(2.*pi.*(y-t)).*sin(2.*pi.*(x-t)));
+ p_exact = @(x,y,t) (-exp(-16*pi*pi*((mu)/rho).*t).*(cos(4*pi*(x-t))+cos(4*pi.*(y-t))));
 
 u = u_exact(xx_sidex,yy_sidex,0);
 v = v_exact(xx_sidey,yy_sidey,0);
@@ -49,8 +49,8 @@ mfac = 1;
 r_cyl = 0.25;
 %Specify the Lagrangian mesh spacing
 ds = mfac*dx/r_cyl;
-approx = round(2*pi/ds);
-ds = 2*pi/approx;
+% approx = round(2*pi/ds);
+% ds = 2*pi/approx;
 dX = mfac*dx;
 l = length(0:ds:2*pi-ds);
 X_1 = Lx.*(0.5.*ones(1,l) + (0.25)*cos(0:ds:2*pi-ds));
@@ -82,13 +82,13 @@ t = 0;
 [u,v,p,F,X,X_tracer] = Peskin_IB(u,v,p,F,X,X_OG,dt,dx,dy,mu,kappa,ds,X_tracer);
 t = t+dt;
 
-% 
-% pp1 = spline([0:ds_tracer:2*pi],[X_tracer(:,1);X_tracer(1,1)]);
-% pp2 = spline([0:ds_tracer:2*pi],[X_tracer(:,2);X_tracer(1,2)]);
-% pp2_deriv = pp_deriv(pp2);
-% pp_mult = pp_multiply(pp1,pp2_deriv);
-% Spline_Area = intpp(pp_mult);
-% Spline_Area_error_rel(1) = abs(Spline_Area - pi*0.25*0.25)./(0.25*0.25*pi);
+
+pp1 = spline([0:ds_tracer:2*pi],[X_tracer(:,1);X_tracer(1,1)]);
+pp2 = spline([0:ds_tracer:2*pi],[X_tracer(:,2);X_tracer(1,2)]);
+pp2_deriv = pp_deriv(pp2);
+pp_mult = pp_multiply(pp1,pp2_deriv);
+Spline_Area = intpp(pp_mult);
+init_error = abs(Spline_Area - pi*0.25*0.25)./(0.25*0.25*pi);
 
 %Build LHS so I don't do it everytimestep
 [ru,cu] = size(u);
@@ -166,23 +166,23 @@ N3 = zeros(rp*cp);
 LHS = [A1 - Lapu, N1, G_x; N2, A2 - Lapv, G_y; -Dx, -Dy,N3];
 %I might want to instead try solving for the Schur complement
 k = 1;
-while t < 10
+while t < 0.1
 %Now use the Adams Bashforth scheme the rest of the way
 [u_new,v_new,p,F,X,X_tracer] = IB_explicit_AB2(u,v,p,u0,v0,F,X,X_OG,dt,dx,dy,mu,kappa,ds,LHS,A1,A2,X_tracer);
-t = t+dt
+t = t+dt;
 %Record the solution to use for the next time-step
 u0 = u;
 v0 = v;
 u = u_new;
 v = v_new;
 
-% pp1 = spline([0:ds_tracer:2*pi],[X_tracer(:,1);X_tracer(1,1)]);
-% pp2 = spline([0:ds_tracer:2*pi],[X_tracer(:,2);X_tracer(1,2)]);
-% pp2_deriv = pp_deriv(pp2);
-% spline_mult = pp_multiply(pp1,pp2_deriv);
-% Spline_Area = intpp(spline_mult);
-% Spline_Area_error_abs(k) = abs(Spline_Area - r_cyl*r_cyl*pi);
-% Spline_Area_error_rel(k) = Spline_Area_error_abs(k)./r_cyl*r_cyl*pi;
+pp1 = spline([0:ds_tracer:2*pi],[X_tracer(:,1);X_tracer(1,1)]);
+pp2 = spline([0:ds_tracer:2*pi],[X_tracer(:,2);X_tracer(1,2)]);
+pp2_deriv = pp_deriv
+spline_mult = pp_multiply(pp1,pp2_deriv);
+Spline_Area = intpp(spline_mult)-0.25*0.25*pi
+Spline_Area_error_abs = abs(Spline_Area - r_cyl*r_cyl*pi);
+Spline_Area_error_rel = Spline_Area_error_abs./r_cyl*r_cyl*pi;
 % 
 %  du = (u(:,2:end)-u(:,1:end-1))./dx;
 %  dv = (v(2:end,:)-v(1:end-1,:))./dy;
@@ -196,9 +196,9 @@ v = v_new;
 % vce(end,:) = 0.5.*(v(1,:) + v(end,:));
 % [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
 % % contourf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
-% plot(X(:,1),X(:,2),'*','LineWidth',2)
-% hold on
-% plot(X_tracer(:,1),X_tracer(:,2))
+plot(X(:,1),X(:,2),'*','LineWidth',2)
+hold on
+plot(X_tracer(:,1),X_tracer(:,2))
 % hold on
 % % plot(xx_sidex,yy_sidex,'ko')
 % plot(xx_sidey,yy_sidey,'ko')
@@ -212,19 +212,18 @@ v = v_new;
 % vce(1:end-1,:) = 0.5.*(v(2:end,:) + v(1:end-1,:));
 % vce(end,:) = 0.5.*(v(1,:) + v(end,:));
 % contourf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
-% surf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
+% % surf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
 % colormap('default')
 % hold on
 % quiver(xx_cent(1:1:end),yy_cent(1:1:end),uce(1:1:end),vce(1:1:end),'w','linewidth',1.2);
 % axis([0+dx  Lx-dx  0+dy  Ly-dy])
-% plot(X_tracer(:,1),X_tracer(:,2),'LineWidth',2)
-% plot(X(:,1),X(:,2),'o','linewidth',2);
+% plot(X_tracer(:,1),X_tracer(:,2),'o','LineWidth',2)
 % quiver(X(:,1),X(:,2),F(:,1),F(:,2),'k')
-% hold off
-% pause(0)
+hold off
+pause(0)
 Area_new_polygon(k) = polyarea(X_tracer(:,1),X_tracer(:,2));
-Area_spectral(k) = Spectral_Area(X_tracer,ds_tracer);
-Area_error_spectral(k) = abs(Area_spectral(k) - 0.25*0.25*pi)./(0.25*0.25*pi);
+% Area_spectral = Spectral_Area(X_tracer,ds_tracer);
+% Area_error_spectral = abs(Area_spectral - 0.25*0.25*pi)./(0.25*0.25*pi);
 area_error_polygon(k) = abs(Area_new_polygon(k) - pi*0.25*0.25)/(pi*0.25*0.25);
 % surf(x_c,y_c,p)
  %surf(u)

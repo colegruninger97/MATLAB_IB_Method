@@ -1,4 +1,4 @@
-function [U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X,dx,dy)
+function [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy)
 %Right now doing this for the BSpline2,3 couple. Other kernels will be
 %incorporated later
 

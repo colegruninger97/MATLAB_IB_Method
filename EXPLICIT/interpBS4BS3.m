@@ -1,13 +1,13 @@
-function [ffx,ffy] = spreadBS3BS2(F,X,u,v,dx,dy,ds)
+function [U,V,i1x,j1x,i1y,j1y]= interpBS4BS3(u,v,X,dx,dy)
 
 %The goal of this funciton is to spread forces on the Lagrangian structure
 %to the Eulerian grid
 NIB = length(X(:,1));
 [ru,cu] = size(u);
 [rv,cv] = size(v);
-ffx = zeros(ru,cu);
-ffy = zeros(rv,cv);
-C = (ds)/(dx*dy);
+
+U = zeros(NIB,1);
+V = zeros(NIB,1);
 
 for k = 1:NIB
    sxx = X(k,1)/dx;
@@ -24,29 +24,31 @@ for k = 1:NIB
    %need to use modular arithmetic to account for periodic boundary
    %conditions
    
-   %Need to include an if statement for the Bspline2 kernel implementation
+   %Need to include an if statement for the Bspline4 kernel implementation
     
-   j1x = mod(Ixx(1)-1:Ixx(1)+2,cu)+1;
    
-   if rx(2) < 0.5
-       i1x = mod(Ixx(2)-1:Ixx(2)+1,ru)+1;
+   i1x = mod(Ixx(2)-1:Ixx(2)+2,ru)+1;
+   if rx(1) < 0.5
+       j1x = mod(Ixx(1)-2:Ixx(1)+2,cu)+1;
    else
-       i1x = mod(Ixx(2):Ixx(2)+2,ru)+1;
+       j1x = mod(Ixx(1)-1:Ixx(1)+3,cu)+1;
    end
    
-   i1y = mod(Iyy(2)-1:Iyy(2)+2,rv)+1;
-   if ry(1) < 0.5
-       j1y = mod(Iyy(1)-1:Iyy(1)+1,rv)+1;
+   if ry(2) < 0.5
+       i1y = mod(Iyy(2)-2:Iyy(2)+2,rv)+1;
    else
-       j1y = mod(Iyy(1):Iyy(1)+2,cv)+1;
+       i1y = mod(Iyy(2)-1:Iyy(2)+3,rv)+1;
    end
+   
+   j1y = mod(Iyy(1)-1:Iyy(1)+2,cv)+1;
+
    
    %get the weights
-   wsx(:,:) = BS_3x(rx(1)).*BS_2y(rx(2));
-   wsy(:,:) = BS_2x(ry(1)).*BS_3y(ry(2));
+   wsx(:,:) = BS_4x(rx(1)).*BS_3y(rx(2));
+   wsy(:,:) = BS_3x(ry(1)).*BS_4y(ry(2));
    
-   ffx(i1x,j1x) = ffx(i1x,j1x) + C.*F(k,1).*wsx;
-   ffy(i1y,j1y) = ffy(i1y,j1y) + C.*F(k,2).*wsy;
+   U(k,1) = sum(sum(u(i1x,j1x).*wsx(:,:)));
+   V(k,1) = sum(sum(v(i1y,j1y).*wsy(:,:)));
 end
 
 

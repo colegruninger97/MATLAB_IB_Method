@@ -1,30 +1,43 @@
-function [u_new,v_new,p_new,F_new,X_new] = Peskin_IB(u,v,p,F,X,X_OG,dt,dx,dy,mu,eta,dX)
+function [u_new,v_new,p_new,F_new,X_new,X_tracer_new] = Peskin_IB(u,v,p,F,X,X_OG,dt,dx,dy,mu,kappa,ds,X_tracer)
 %Explict implementation of the immersed boundary method following Peskin's
 %lecture notes. 
 
-
+r = 0.25;
 rho = 1.0;
 [ru,cu] = size(u);
 [rv,cv] = size(v);
 %interpolate the velocity onto the Eulerian grid
-% [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
+%  [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X,dx,dy);
+%  [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X_tracer,dx,dy);
+ [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
+ [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u,v,X,dx,dy);
-[U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X,dx,dy);
+% [U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpIB4(u,v,X,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpIB4(u,v,X_tracer,dx,dy);
 %Update the positions of the Lagrangian structure at the half time-step
-X_half(:,1) = X(:,1) + 0.5.*dt*U(:);
-X_half(:,2) = X(:,2) + 0.5.*dt*V(:);
+X_half(:,1) = X(:,1) + 0.5.*dt.*U(:);
+X_half(:,2) = X(:,2) + 0.5.*dt.*V(:);
 X_half(:,1) = mod(X_half(:,1),cu*dx);
 X_half(:,2) = mod(X_half(:,2),rv*dy);
+X_half_tracer(:,1) = X_tracer(:,1) + 0.5.*dt.*Utracer(:);
+X_half_tracer(:,2) = X_tracer(:,2) + 0.5.*dt.*Vtracer(:);
+X_half_tracer(:,1) = mod(X_half_tracer(:,1),cu*dx);
+X_half_tracer(:,2) = mod(X_half_tracer(:,2),rv*dy);
+
 %Update the forces on the Lagrangian grid
 % F_half(:,1) = -kappa*(X_half(:,1) - X_OG(:,1));
 % F_half(:,2) = -kappa*(X_half(:,2) - X_OG(:,2));
-% F_half = Elastic_force_update(X_half,kappa,dX);
-F_half(:,1) = -eta*U;
-F_half(:,2) = -eta*V;
+% F_half = Elastic_force_update(X_half,kappa,ds);
+F_half = Elastic_Laplacian(X_half,kappa,ds);
+% F_half = uniform_normal_force_circle(X_half,kappa,ds,r);
+% F_half(:,1) = -eta*U;
+% F_half(:,2) = -eta*V;
 %Spread these forces onto the Eulerian grid
-% [ffx_half,ffy_half] = spreadBS3BS2(F_half,X_half,u,v,dx,dy,dX);
-[ffx_half,ffy_half] = spreadBS2BS1(F_half,X_half,u,v,dx,dy,dX);
+ [ffx_half,ffy_half] = spreadBS3BS2(0.*F_half,X_half,u,v,dx,dy,ds);
+% [ffx_half,ffy_half] = spreadBS2BS1(F_half,X_half,u,v,dx,dy,ds);
+% [ffx_half,ffy_half] = spreadIB4(F_half,X_half,u,v,dx,dy,ds);
 
 % Form the matrices needed to solve the linear system ....
 %Laplacian for u
@@ -74,7 +87,7 @@ G_x = zeros(cp,cp);
 G_x(1:cp+1:end) = 1/dx;
 G_x(2:cp+1:end) = -1/dx;
 G_x(1,end) = -1/dx;
-Ix = eye(rp,rp);
+Ix = speye(rp,rp);
 G_x = kron(G_x,Ix);
 
 
@@ -82,7 +95,7 @@ G_y = zeros(rp,rp);
 G_y(1:rp+1:end) = 1/dy;
 G_y(2:rp+1:end) = -1/dy;
 G_y(1,end) = -1/dy;
-Iy = eye(cp,cp);
+Iy = speye(cp,cp);
 G_y = kron(Iy,G_y);
 
 
@@ -145,24 +158,36 @@ v_half = reshape(v_half,rv,cv);
 
 
 % Now again update the the lagrange points 
-% [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half,dx,dy);
+[U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half,dx,dy);
+[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half_tracer,dx,dy);
+% [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u_half,v_half,X_half,dx,dy);
-[U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u_half,v_half,X_half,dx,dy);
+% [U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u_half,v_half,X_half,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS2BS1(u_half,v_half,X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpIB4(u_half,v_half,X_half,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpIB4(u_half,v_half,X_half_tracer,dx,dy);
 X_new(:,1) = X(:,1) + dt*U(:);
 X_new(:,2) = X(:,2) + dt*V(:);
 X_new(:,1) = mod(X_new(:,1),cu*dx);
 X_new(:,2) = mod(X_new(:,2),rv*dy);
+X_tracer_new(:,1) = X_tracer(:,1) + dt*Utracer(:);
+X_tracer_new(:,2) = X_tracer(:,2) + dt*Vtracer(:);
+X_tracer_new(:,1) = mod(X_tracer_new(:,1),cu*dx);
+X_tracer_new(:,2) = mod(X_tracer_new(:,2),rv*dy);
 %Update the forces on the Lagrangian grid
 % F_new(:,1) = -kappa*(X_new(:,1) - X_OG(:,1));
 % F_new(:,2) = -kappa*(X_new(:,2) - X_OG(:,2));
-% F_new = Elastic_force_update(X_new,kappa,dX);
-F_new(:,1) = -eta*U;
-F_new(:,2) = -eta*V;
+% F_new = Elastic_force_update(X_new,kappa,ds);
+F_new = Elastic_Laplacian(X_new,kappa,ds);
+% F_new = uniform_normal_force_circle(X_new,kappa,ds,r);
+% F_new(:,1) = -eta*U;
+% F_new(:,2) = -eta*V;
 
 %Spread these forces to the Eulerian grid
-% [ffx_new,ffy_new] = spreadBS3BS2(F_new,X_new,u_half,v_half,dx,dy,dX);
-[ffx_new,ffy_new] = spreadBS2BS1(F_new,X_new,u_half,v_half,dx,dy,dX);
+[ffx_new,ffy_new] = spreadBS3BS2(F_new,X_new,u_half,v_half,dx,dy,ds);
+% [ffx_new,ffy_new] = spreadBS2BS1(F_new,X_new,u_half,v_half,dx,dy,ds);
+% [ffx_new,ffy_new] = spreadIB4(F_new,X_new,u_half,v_half,dx,dy,ds);
  %Do another solve for the new velocity and pressure
  
 [u_halfg,v_halfg] = Ghostnodesside_periodic(u_half,v_half);
@@ -185,8 +210,8 @@ Conv_v_half = rho.*Conv_v_half;
 A1 = 0.5.*A1;
 A2 = 0.5.*A2;
 LHS = [A1 - 0.5.*Lapu, N1, G_x; N2, A2 - 0.5.*Lapv, G_y; -Dx, -Dy,N3];
-RHS = [-Conv_u_half(:) + A1*u(:) + Lapu_rhs(:) + ffx_new(:);...
-    -Conv_v_half(:) +  A2*v(:) + Lapv_rhs(:) + ffy_new(:);...
+RHS = [-Conv_u_half(:) + A1*u(:) + Lapu_rhs(:) + 0.*ffx_new(:);...
+    -Conv_v_half(:) +  A2*v(:) + Lapv_rhs(:) + 0.*ffy_new(:);...
      N7(:)];
 vals = LHS\RHS;
 u_new = vals(1:ru*(cu));
