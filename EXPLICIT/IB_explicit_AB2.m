@@ -31,8 +31,8 @@ X_half_tracer(:,2) = mod(X_half_tracer(:,2),rv*dy);
 % F_half(:,2) = -kappa*(X_half(:,2) - X_OG(:,2));
 % F_half(:,1) = -eta*U;
 % F_half(:,2) = -eta*V;
-%  F_half = Elastic_force_update(X_half,kappa,ds);
-F_half = Elastic_Laplacian(X_half,kappa,ds);
+ F_half = Elastic_force_update(X_half,kappa,ds);
+% F_half = Elastic_Laplacian(X_half,kappa,ds);
 % F_half = uniform_normal_force_circle(X_half,kappa,ds,r);
 %Spread these forces onto the Eulerian grid
 [ffx_half,ffy_half] = spreadBS3BS2(F_half,X_half,u,v,dx,dy,ds);
@@ -191,8 +191,8 @@ X_tracer_new(:,2) = mod(X_tracer_new(:,2),rv*dy);
 %Update the forces on the Lagrangian grid
 % F_new(:,1) = -kappa*(X_new(:,1) - X_OG(:,1));
 % F_new(:,2) = -kappa*(X_new(:,2) - X_OG(:,2));
-% F_new = Elastic_force_update(X_new,kappa,ds);
-F_new = Elastic_Laplacian(X_new,kappa,ds);
+F_new = Elastic_force_update(X_new,kappa,ds);
+% F_new = Elastic_Laplacian(X_new,kappa,ds);
 % F_new = uniform_normal_force_circle(X_new,kappa,ds,r);
 % F_new(:,1) = -eta*U;
 % F_new(:,2) = -eta*V;

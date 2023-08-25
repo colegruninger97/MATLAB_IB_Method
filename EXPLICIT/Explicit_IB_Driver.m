@@ -7,7 +7,7 @@ clc;
 
 %Define the initial geometry ...
 %The following grid setup is particular to the periodic case...
-N = 64;
+N = 128;
 Lx = 1.0; %Make these variables global later...
 Ly = 1.0;
 dy = Ly/N; %Mesh spacing is uniform for simplicity
@@ -53,8 +53,8 @@ approx = round(2*pi/ds);
 ds = 2*pi/approx;
 dX = mfac*dx;
 l = length(0:ds:2*pi-ds);
-X_1 = Lx.*(0.5.*ones(1,l) + (0.25)*cos(0:ds:2*pi-ds));
-X_2 = Lx.*(0.5.*ones(1,l) +  (0.25)*sin(0:ds:2*pi-ds));
+X_1 = Lx.*(0.5.*ones(1,l) + (0.2)*cos(0:ds:2*pi-ds));
+X_2 = Lx.*(0.5.*ones(1,l) +  (0.3)*sin(0:ds:2*pi-ds));
 % X_1 = Ly/4:dX:3*Ly/4;
 % 
 % X_2 = Lx/2.*ones(1,length(X_1));
@@ -66,8 +66,8 @@ X = X_OG;
 NIB = length(X_2);
 N_IB_tracer = 20*NIB;
 ds_tracer = 2*pi/N_IB_tracer;
-X_1_tracer = Lx.*(0.5.*ones(1,N_IB_tracer) + (0.25).*cos(0:ds_tracer:2*pi-ds_tracer));
-X_2_tracer = Lx.*(0.5.*ones(1,N_IB_tracer) + (0.25).*sin(0:ds_tracer:2*pi-ds_tracer));
+X_1_tracer = Lx.*(0.5.*ones(1,N_IB_tracer) + (0.2).*cos(0:ds_tracer:2*pi-ds_tracer));
+X_2_tracer = Lx.*(0.5.*ones(1,N_IB_tracer) + (0.3).*sin(0:ds_tracer:2*pi-ds_tracer));
 X_tracer = [X_1_tracer;X_2_tracer];
 X_tracer = X_tracer';
 X_tracer_OG = X_tracer;
@@ -166,7 +166,7 @@ N3 = zeros(rp*cp);
 LHS = [A1 - Lapu, N1, G_x; N2, A2 - Lapv, G_y; -Dx, -Dy,N3];
 %I might want to instead try solving for the Schur complement
 k = 1;
-while t < 10
+while t < 200*dt - 0.0000000001;
 %Now use the Adams Bashforth scheme the rest of the way
 [u_new,v_new,p,F,X,X_tracer] = IB_explicit_AB2(u,v,p,u0,v0,F,X,X_OG,dt,dx,dy,mu,kappa,ds,LHS,A1,A2,X_tracer);
 t = t+dt
@@ -207,25 +207,25 @@ v = v_new;
 % hold off
 % axis([0 1 0 1])
 % pause(1.0)
-% uce(:,1:end-1) = 0.5.*(u(:,2:end) + u(:,1:end-1));
-% uce(:,end) = 0.5.*(u(:,1) + u(:,end));
-% vce(1:end-1,:) = 0.5.*(v(2:end,:) + v(1:end-1,:));
-% vce(end,:) = 0.5.*(v(1,:) + v(end,:));
-% contourf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
+uce(:,1:end-1) = 0.5.*(u(:,2:end) + u(:,1:end-1));
+uce(:,end) = 0.5.*(u(:,1) + u(:,end));
+vce(1:end-1,:) = 0.5.*(v(2:end,:) + v(1:end-1,:));
+vce(end,:) = 0.5.*(v(1,:) + v(end,:));
+contourf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
 % surf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
-% colormap('default')
-% hold on
-% quiver(xx_cent(1:1:end),yy_cent(1:1:end),uce(1:1:end),vce(1:1:end),'w','linewidth',1.2);
-% axis([0+dx  Lx-dx  0+dy  Ly-dy])
-% plot(X_tracer(:,1),X_tracer(:,2),'LineWidth',2)
-% plot(X(:,1),X(:,2),'o','linewidth',2);
-% quiver(X(:,1),X(:,2),F(:,1),F(:,2),'k')
-% hold off
-% pause(0)
-Area_new_polygon(k) = polyarea(X_tracer(:,1),X_tracer(:,2));
-Area_spectral(k) = Spectral_Area(X_tracer,ds_tracer);
-Area_error_spectral(k) = abs(Area_spectral(k) - 0.25*0.25*pi)./(0.25*0.25*pi);
-area_error_polygon(k) = abs(Area_new_polygon(k) - pi*0.25*0.25)/(pi*0.25*0.25);
+colormap('default')
+hold on
+quiver(xx_cent(1:1:end),yy_cent(1:1:end),uce(1:1:end),vce(1:1:end),'w','linewidth',1.2);
+axis([0+dx  Lx-dx  0+dy  Ly-dy])
+plot(X_tracer(:,1),X_tracer(:,2),'LineWidth',2)
+plot(X(:,1),X(:,2),'o','linewidth',2);
+quiver(X(:,1),X(:,2),F(:,1),F(:,2),'k')
+hold off
+pause(0)
+% Area_new_polygon(k) = polyarea(X_tracer(:,1),X_tracer(:,2));
+% Area_spectral(k) = Spectral_Area(X_tracer,ds_tracer);
+% Area_error_spectral(k) = abs(Area_spectral(k) - 0.25*0.25*pi)./(0.25*0.25*pi);
+% area_error_polygon(k) = abs(Area_new_polygon(k) - pi*0.25*0.25)/(pi*0.25*0.25);
 % surf(x_c,y_c,p)
  %surf(u)
 %Compute the errors
