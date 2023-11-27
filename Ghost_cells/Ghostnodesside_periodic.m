@@ -9,7 +9,7 @@ v_new = zeros(rv+2,cv+2);
 u_new(2:end-1,2:end-1) = u;
 v_new(2:end-1,2:end-1) = v;
 
-%Fill em
+%Fill the ghost cell values
 
 u_new(2:end-1,end) = u(:,1);
 u_new(2:end-1,1) = u(:,end);

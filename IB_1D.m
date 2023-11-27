@@ -5,7 +5,7 @@
 
 %rho(u_t + u_x) = /mu u_xx + friction penalty term
 %X_t = U
-C = 6;
+C = 1;
 %We will simulate the dynamics on a periodic grid
 
 N = 128;
@@ -13,7 +13,7 @@ h = 1/N;
 x = 0:h:1-h;
 dt = 0.5*h*h;
 rho = 1; %density
-eta = (rho*h/dt)*C; %eta < rho*h/dt
+eta = (rho*h/dt)*0.5; %eta < rho*h/dt
 mu = 1;
 
 
@@ -36,6 +36,7 @@ u = u - dt.*((u_g(3:end) - u_g(1:end-2))./(2*h)) + (mu.*dt/(rho*h*h)).*(u_g(3:en
 u_g(2:end-1) = u;
 u_g(1) = u(end);
 u_g(end) = u(1);
+U = One_d_interp(X,u,h);
 X = X + dt*U;
 phi = IB4(mod((x-X)./h,N));
 plot(x,u)

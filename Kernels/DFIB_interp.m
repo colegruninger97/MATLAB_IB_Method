@@ -1,0 +1,45 @@
+function [U,V] = DFIB_interp(phi,u0,v0,X,dx,dy)
+%interpolates the x-component of the velocity U and the y-component of the
+%velocity V at each point of the Lagrangian structure in such a way that
+%the resulting field is continuously divergence free. 
+
+[U,V] = interp_grad_perp_IB6(phi,u0,v0,X,dx,dy);
+
+
+
+end
+
+function[U,V]=interp_grad_perp_IB6(phi,u0,v0,X,dx,dy)
+
+%Phi is the function interpolated at each point on the lagrangian grid
+NIB = length(X(:,1));
+[rphi,cphi] = size(phi);
+K = 59/60-sqrt(29)/20; 
+U = zeros(NIB,1);
+V = zeros(NIB,1);
+for k = 1:NIB
+   sxx = X(k,1)/dx;
+   syy = X(k,2)/dy;
+   Ixx = floor(sxx);
+   Iyy = floor(syy);
+   rx = sxx - Ixx; %compute the relevant r value defined in (0,1) in both x and y
+   ry = syy - Iyy;
+   %Get the relevant indices to interpolate onto the lagrangian structure
+   %need to use modular arithmetic to account for periodic boundary
+   %conditions
+   
+   %Need to include an if statement for the Bspline2 kernel implementation
+
+   j1 = mod(Ixx-2:Ixx+3,cphi)+1;
+   i1 = mod(Iyy-2:Iyy+3,rphi)+1;
+   
+   %get the weights
+   wsx(:,:) = -(1/dy).*IB6x(rx,K).*IB6y_prime(ry,K);
+   wsy(:,:) = (1/dx).*IB6x_prime(rx,K).*IB6y(ry,K);
+   U(k,1) = u0 + sum(sum(phi(i1,j1).*wsx(:,:)));
+   V(k,1) = v0 + sum(sum(phi(i1,j1).*wsy(:,:)));
+    
+end
+
+end
+

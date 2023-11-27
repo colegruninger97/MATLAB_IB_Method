@@ -9,9 +9,8 @@
 
 
 
-
 %Set up a periodic grid for the Green's function to be evaluated on
-N = 64;
+N = 128;
 dx = 2*pi/N;
 dy = 2*pi/N;
 x = -pi:dx:pi-dx;
@@ -19,21 +18,25 @@ y = -pi:dy:pi-dy;
 k = -pi/dx:1:round((pi-dx)/dx);
 l = -pi/dx:1:round((pi-dy)/dy);
 u = zeros(length(y),length(x));
-ds = 0.5*dx;
+ds = 0.1*dx;
 theta = 0:ds:2*pi-ds;
 X = cos(theta);
 Y = sin(theta); %Place in the unit circle
+% X = 0;
+% Y = 0;
 
 %Construct a force which points in the normal direction along the circle
-F1 = cos(theta);
-F2 = sin(theta);
+F1 = sin(theta);
+F2 = cos(theta);
+% F1 = 1;
+% F2 = 0;
 
 
 %Compute the periodic green's function on this domain
 %Define the wave numbers on the grid
 
- %K = 59/60-sqrt(29)/20;
-K = 0;
+K = 59/60-sqrt(29)/20;
+% K = 0;
 
 delta_h_cosine = @(x,y,X,Y) (1/(dy*dx)).*cos_kernel(((x-X)./dx)).*cos_kernel((y-Y)./dy)';
 delta_h_BS2 = @(x,y,X,Y) (1/(dy*dx)).*BS2((x-X)./dx).*BS2((y-Y)./dy)';
@@ -50,10 +53,15 @@ RHSx = zeros(length(y),length(x));
 RHSy = zeros(length(y),length(x));
 
 graph = @(x) sqrt(1-x.^2); %graph for the circle
-for i = 1:length(theta) %Implicitly uses trapzoidal rule on the circle...
+for i = 1:length(X) %Implicitly uses trapzoidal rule on the circle...
     RHSx(:,:) = RHSx(:,:) + delta_h_IB6(x,y,X(i),Y(i)).*F1(i)*ds;
     RHSy(:,:) = RHSy(:,:) + delta_h_IB6(x,y,X(i),Y(i)).*F2(i)*ds;
 end
+
+XX = [X;Y];
+XX = XX';
+
+[RHSx_DFIB,RHSy_DFIB] = DFIB_spread_spectral(zeros(N,N),[F1;F2]',XX,2*pi*2*pi,dx,dy,ds);
 
 % for i = 1:length(theta) %Implicitly uses trapzoidal rule on the circle...
 %     for n = 1:length(y)
@@ -83,6 +91,11 @@ RHSx_hat = fft2(RHSx);
 RHSy_hat = fft2(RHSy);
 RHSx_hat = fftshift(RHSx_hat);
 RHSy_hat = fftshift(RHSy_hat);
+
+RHSx_DFIB_hat = fft2(RHSx_DFIB);
+RHSy_DFIB_hat = fft2(RHSy_DFIB);
+RHSx_DFIB_hat = fftshift(RHSx_DFIB_hat);
+RHSy_DFIB_hat = fftshift(RHSy_DFIB_hat);
 
 
 %Construct the periodic Green's function component by component
@@ -128,33 +141,28 @@ V = (1/dx).*(1/dy).*real(ifftshift(ifft2(fftshift(V_hat))));
 convx_hat = Gxx_hat.*RHSx_hat + Gxy_hat.*RHSy_hat;
 convy_hat = Gxy_hat.*RHSx_hat + Gyy_hat.*RHSy_hat;
 
+convx_DFIB_hat = Gxx_hat.*RHSx_DFIB_hat + Gxy_hat.*RHSy_DFIB_hat;
+convy_DFIB_hat = Gxy_hat.*RHSx_DFIB_hat + Gyy_hat.*RHSy_DFIB_hat;
+
 convx = real(ifft2(fftshift(convx_hat)));
 convy = real(ifft2(fftshift(convy_hat)));
 
+convx_DFIB = real(ifft2(fftshift(convx_DFIB_hat)));
+convy_DFIB = real(ifft2(fftshift(convy_DFIB_hat)));
+
+
 conv_mag = sqrt(convx.^2 + convy.^2);
+conv_DFIB_mag = sqrt(convx_DFIB.^2 + convy_DFIB.^2);
 U_mag = sqrt(U.^2 + V.^2);
-err = abs(U_mag);
-L1_err = dx*dy*sum(err,'all');
-L2_err = sqrt(dx*dy*sum(err.^2,'all'));
-L_inf_err = max(err,[],'all');
+err_IB = abs(U_mag - conv_mag);
+err_DFIB = abs(conv_DFIB_mag);
+L1_err_IB = dx*dy*sum(err_IB,'all');
+L2_err_IB = sqrt(dx*dy*sum(err_IB.^2,'all'));
+L_inf_err_IB = max(err_IB,[],'all');
+L1_err_DFIB = dx*dy*sum(err_DFIB,'all');
+L2_err_DFIB = sqrt(dx*dy*sum(err_DFIB.^2,'all'));
+L_inf_err_DFIB = max(err_DFIB,[],'all');
 
-
-%Perform convolution of the Green's function with the regularized delta
-%function. In fourier space, this is simply multiplacation. 
-
-% for i = 1:length(y)
-%     for j = 1:length(x)
-%         for q = 0:length(k)-1
-%             for m = 0:length(l)-1
-%                 u(i,j) = u(i,j) + Gxx_hat(m+1,q+1)*exp(2*pi*1i*q*x(j) + 2*pi*1i*m*y(i));
-%             end
-%         end
-%     end
-% end
-
-% U = (1/dx).*(1/dy).*real(ifftshift(ifft2(fftshift(Gxx_hat))));
-% V = (1/dx).*(1/dy).*real(ifftshift(ifft2(fftshift(Gxy_hat))));
-% U_mag = sqrt(U.^2 + V.^2);
 
 function val = cos_kernel(r)
     %Width of the kernel is 4
