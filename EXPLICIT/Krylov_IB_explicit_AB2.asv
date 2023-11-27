@@ -1,20 +1,20 @@
-function [u_new,v_new,p_new,F_new,X_new,X_tracer_new] = Krylov_IB_explicit_AB2(u,v,p,u0,v0,F,X,X_OG,dt,dx,dy,mu,kappa,ds,X_tracer)
+function [u_new,v_new,p_new,F_new,X_new,X_tracer_new] = Krylov_IB_explicit_AB2(u,v,p,u0,v0,F,X,X_tracer,dt,dx,dy,mu,kappa,ds)
 
 rho = 1.0;
 [ru,cu] = size(u);
 [rv,cv] = size(v);
-u0 = mean(u(:));
-v0 = mean(v(:));
+u00 = mean(u(:));
+v00 = mean(v(:));
 %DFIB approach...
 phi = solve_for_potential(u,v,dx,dy);
-[U,V] = DFIB_interp(phi,u0,v0,X,dx,dy);
-[Utracer,Vtracer] = DFIB(phi,u0,v0,X,dx,dy);
+% [U,V] = DFIB_interp(phi,u00,v00,X,dx,dy);
+% [Utracer,Vtracer] = DFIB_interp(phi,u00,v00,X_tracer,dx,dy);
 
 
 
 %interpolate the velocity onto the Eulerian grid
-% [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
-% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
+[U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
+[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u,v,X,dx,dy);
@@ -40,12 +40,12 @@ X_half_tracer(:,2) = mod(X_half_tracer(:,2),rv*dy);
 % F_half = Elastic_Laplacian(X_half,kappa,ds);
 % F_half = uniform_normal_force_circle(X_half,kappa,ds,r);
 %Spread these forces onto the Eulerian grid
-% [ffx_half,ffy_half] = spreadBS3BS2(F_half,X_half,u,v,dx,dy,ds);
+[ffx_half,ffy_half] = spreadBS3BS2(F_half,X_half,u,v,dx,dy,ds);
 % [ffx_half,ffy_half] = spreadBS2BS1(F_half,X_half,u,v,dx,dy,ds);
-% [ffx_half,ffy_half] = spreadIB4(F_half,X_half,u,v,dx,dy,ds);
-
+%[ffx_half,ffy_half] = spreadIB4(F_half,X_half,u,v,dx,dy,ds);
+Vol = 1.0;
 %DFIB spread
-[ffx_half,ffy_half] = DFIB_spread(
+% [ffx_half,ffy_half] = DFIB_spread(phi,F_half,X_half,Vol,dx,dy,ds);
 
 
 
@@ -120,6 +120,14 @@ p_new = reshape(p_new,rp,cp);
 
 
 % Now again update the the lagrange points 
+
+%DFIB method...
+% phi = solve_for_potential(0.5*(u_new+u),0.5*(v_new+v),dx,dy);
+% u00 = mean(0.5.*(u_new(:)+u(:)));
+% v00 = mean(0.5.*(v_new(:)+v(:)));
+% [U,V] = DFIB_interp(phi,u00,v00,X_half,dx,dy);
+% [Utracer,Vtracer] = DFIB_interp(phi,u00,v00,X_half_tracer,dx,dy);
+
 [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(0.5.*(u_new + u),0.5.*(v_new + v),X_half,dx,dy);
 [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(0.5.*(u_new + u),0.5.*(v_new + v),X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(0.5.*(u_new + u),0.5.*(v_new + v),X_half,dx,dy);
@@ -160,7 +168,7 @@ end
 
     % Step 2: Combine Gpx and Gpy and apply A^-1 (Inverse of Laplacian)
     Gp_combined = [Gpx; Gpy];
-    tol = 1e-8;
+    tol = 1e-9;
     maxit = 1000;
     invAGp = applyInvA(Gp_combined, nx, ny, dx, dy, tol, maxit,rho,mu,dt);
 
@@ -185,7 +193,7 @@ end
 
     % Step 2: Combine Gpx and Gpy and apply A^-1 (Inverse of Laplacian)
     Gp_combined = [Gpx; Gpy];
-    tol = 1e-8;
+    tol = 1e-9;
     maxit = 1000;
     invAGp = applyInvA2(Gp_combined, nx, ny, dx, dy, tol, maxit,rho,mu,dt);
 
@@ -261,7 +269,7 @@ function x = applyInvA2(b, nx, ny, dx, dy, tol, maxit,rho,mu,dt)
 
     % Use MATLAB's pcg function to solve A*x = b
     maxit = 100;
-    tol = 1e-7;
+    tol = 1e-9;
     [x, flag, relres, iter] = pcg(@(u)applyA2(u, nx, ny, dx, dy,rho,dt,mu), b, tol, maxit);
     % Check if the solver converged
     if flag ~= 0
@@ -398,7 +406,7 @@ function Schur = Schurcomplement_pre(x,nx,ny,dx,dy,rho,dt,mu)
 %the GMRES implementation
 U = x(1:2*nx*ny);
 p = x(2*nx*ny+1:end);
-tol = 1e-5;
+tol = 1e-6;
 maxit = 500;
 p =  fftPreconditionedSolveLaplacian2D(p, nx, ny, dx, dy);
 p = applyA2c(p,nx,ny,dx,dy,rho,dt,mu);

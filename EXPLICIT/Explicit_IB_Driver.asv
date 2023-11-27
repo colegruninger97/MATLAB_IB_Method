@@ -2,6 +2,7 @@
 % dirac delta functions are not fixed and the singular forces are thus
 % nonlinear. I'm trying to understand how the relative spacing of the
 % Lagrangian mesh affects convergence in different flow regimes...
+addpath('../Ghost_cells/','../Kernels/');
 clear;
 clc;
 %Define the initial geometry ...
@@ -13,7 +14,7 @@ dy = Ly/N; %Mesh spacing is uniform for simplicity
 dx = dy;
 mu = 0.1;
 rho = 1.0;
-dt = Lx/(4*N);
+dt = Lx/(20*N);
 eta = 3*rho*dx/dt;
 x = 0:dx:Lx-dx;
 y = 0:dy:Ly-dy;
@@ -44,7 +45,7 @@ p0 = p;
 % v = sin(2*pi.*yy_sidey).*cos(2*pi.*xx_sidey);
 %
 
-mfac = 0.25;
+mfac = 0.5;
 r_cyl = 0.25;
 %Specify the Lagrangian mesh spacing
 ds = mfac*dx/r_cyl;
@@ -52,8 +53,8 @@ approx = round(2*pi/ds);
 ds = 2*pi/approx;
 dX = mfac*dx;
 l = length(0:ds:2*pi-ds);
-X_1 = Lx.*(0.5.*ones(1,l) + (5/28)*cos(0:ds:2*pi-ds));
-X_2 = Lx.*(0.5.*ones(1,l) +  (7/20)*sin(0:ds:2*pi-ds));
+X_1 = Lx.*(0.5.*ones(1,l) + (0.25)*cos(0:ds:2*pi-ds));
+X_2 = Lx.*(0.5.*ones(1,l) +  (0.25)*sin(0:ds:2*pi-ds));
 % X_1 = Ly/4:dX:3*Ly/4;
 % 
 % X_2 = Lx/2.*ones(1,length(X_1));
@@ -63,12 +64,12 @@ X_OG = [X_1;X_2];
 X_OG = X_OG';
 X = X_OG;
 NIB = length(X_2);
-% N_IB_tracer = 20*NIB;
-% ds_tracer = 2*pi/N_IB_tracer;
-% X_1_tracer = Lx.*(0.5.*ones(1,N_IB_tracer) + (0.3).*cos(0:ds_tracer:2*pi-ds_tracer));
-% X_2_tracer = Lx.*(0.5.*ones(1,N_IB_tracer) + (0.2).*sin(0:ds_tracer:2*pi-ds_tracer));
-% X_tracer = [X_1_tracer;X_2_tracer];
-% X_tracer = X_tracer';
+N_IB_tracer = 20*NIB;
+ds_tracer = 2*pi/N_IB_tracer;
+X_1_tracer = Lx.*(0.5.*ones(1,N_IB_tracer) + (0.25).*cos(0:ds_tracer:2*pi-ds_tracer));
+X_2_tracer = Lx.*(0.5.*ones(1,N_IB_tracer) + (0.25).*sin(0:ds_tracer:2*pi-ds_tracer));
+X_tracer = [X_1_tracer;X_2_tracer];
+X_tracer = X_tracer';
 % X_tracer_OG = X_tracer;
 kappa = 1;
 T_final = 5;
@@ -76,18 +77,19 @@ F= zeros(length(X_2),2);
 uce = zeros(length(y_c),length(x_c));
 vce = uce;
 t = 0;
+Init_Poly_area = polyarea(
 
 %Take an initial timestep using Peskin's IB method
-[u,v,p,F,X] = Krylov_Peskin_IB(u,v,p,F,X,dt,dx,dy,mu,kappa,ds);
+[u,v,p,F,X,X_tracer] = Krylov_Peskin_IB(u,v,p,F,X,X_tracer,dt,dx,dy,mu,kappa,ds);
 t = t+dt;
 
 % setup spline interpolant of tracers after initial RK2 step.
-% pp1 = spline([0:ds_tracer:2*pi],[X_tracer(:,1);X_tracer(1,1)]);
-% pp2 = spline([0:ds_tracer:2*pi],[X_tracer(:,2);X_tracer(1,2)]);
-% pp2_deriv = pp_deriv(pp2);
-% pp_mult = pp_multiply(pp1,pp2_deriv);
-% Spline_Area = intpp(pp_mult);
-% Spline_Area_error_rel(1) = abs(Spline_Area - pi*0.25*0.25)./(0.25*0.25*pi);
+pp1 = spline([0:ds_tracer:2*pi],[X_tracer(:,1);X_tracer(1,1)]);
+pp2 = spline([0:ds_tracer:2*pi],[X_tracer(:,2);X_tracer(1,2)]);
+pp2_deriv = pp_deriv(pp2);
+pp_mult = pp_multiply(pp1,pp2_deriv);
+Spline_Area = intpp(pp_mult);
+Spline_Area_error_rel(1) = abs(Spline_Area - pi*0.25*0.25)./(0.25*0.25*pi);
 
 
 %I might want to instead try solving for the Schur complement
@@ -97,20 +99,20 @@ while t < T_final
 if t + dt > T_final
     dt = T_final - t;
 end
-[u_new,v_new,p,F,X] = Krylov_IB_explicit_AB2(u,v,p,u0,v0,F,X,dt,dx,dy,mu,kappa,ds);
+[u_new,v_new,p,F,X,X_tracer] = Krylov_IB_explicit_AB2(u,v,p,u0,v0,F,X,X_tracer,dt,dx,dy,mu,kappa,ds);
 %Record the solution to use for the next time-step
 u0 = u;
 v0 = v;
 u = u_new;
 v = v_new;
 
-% pp1 = spline([0:ds_tracer:2*pi],[X_tracer(:,1);X_tracer(1,1)]);
-% pp2 = spline([0:ds_tracer:2*pi],[X_tracer(:,2);X_tracer(1,2)]);
-% pp2_deriv = pp_deriv(pp2);
-% spline_mult = pp_multiply(pp1,pp2_deriv);
-% Spline_Area = intpp(spline_mult);
-% Spline_Area_error_abs(k) = abs(Spline_Area - r_cyl*r_cyl*pi);
-% Spline_Area_error_rel(k) = Spline_Area_error_abs(k)./r_cyl*r_cyl*pi;
+pp1 = spline([0:ds_tracer:2*pi],[X_tracer(:,1);X_tracer(1,1)]);
+pp2 = spline([0:ds_tracer:2*pi],[X_tracer(:,2);X_tracer(1,2)]);
+pp2_deriv = pp_deriv(pp2);
+spline_mult = pp_multiply(pp1,pp2_deriv);
+Spline_Area = intpp(spline_mult);
+Spline_Area_error_abs(k) = abs(Spline_Area - r_cyl*r_cyl*pi);
+Spline_Area_error_rel(k) = Spline_Area_error_abs(k)./r_cyl*r_cyl*pi;
 
 %  du = (u(:,2:end)-u(:,1:end-1))./dx;
 %  dv = (v(2:end,:)-v(1:end-1,:))./dy;
@@ -139,23 +141,23 @@ uce(:,1:end-1) = 0.5.*(u(:,2:end) + u(:,1:end-1));
 uce(:,end) = 0.5.*(u(:,1) + u(:,end));
 vce(1:end-1,:) = 0.5.*(v(2:end,:) + v(1:end-1,:));
 vce(end,:) = 0.5.*(v(1,:) + v(end,:));
-% contourf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
-% % surf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
-% colormap('default')
-% hold on
-% %quiver(xx_cent(1:1:end),yy_cent(1:1:end),uce(1:1:end),vce(1:1:end),'w','linewidth',1.2);
-% axis([0+dx  Lx-dx  0+dy  Ly-dy])
-% % plot(X_tracer(:,1),X_tracer(:,2),'LineWidth',2)
-% plot(X(:,1),X(:,2),'o','linewidth',2);
-% quiver(X(:,1),X(:,2),F(:,1),F(:,2),'k')
-% hold off
-% pause(0)
+contourf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
+% surf(xx_cent,yy_cent,sqrt(uce.^2 + vce.^2))
+colormap('default')
+hold on
+%quiver(xx_cent(1:1:end),yy_cent(1:1:end),uce(1:1:end),vce(1:1:end),'w','linewidth',1.2);
+axis([0+dx  Lx-dx  0+dy  Ly-dy])
+% plot(X_tracer(:,1),X_tracer(:,2),'LineWidth',2)
+plot(X(:,1),X(:,2),'o','linewidth',2);
+quiver(X(:,1),X(:,2),F(:,1),F(:,2),'k')
+hold off
+pause(0)
 % Area_new_polygon(k) = polyarea(X_tracer(:,1),X_tracer(:,2));
 % Area_spectral(k) = Spectral_Area(X_tracer,ds_tracer);
 % Area_error_spectral(k) = abs(Area_spectral(k) - 0.25*0.25*pi)./(0.25*0.25*pi);
 % area_error_polygon(k) = abs(Area_new_polygon(k) - pi*0.25*0.25)/(0.25*0.25*pi);
- surf(v)
- pause(0)
+%  surf(p)
+%  pause(0)
  %surf(u)
 %Compute the errors
 %  erru = abs(u(:,:)-u_exact(xx_sidex,yy_sidex,t));
@@ -169,7 +171,7 @@ vce(end,:) = 0.5.*(v(1,:) + v(end,:));
 k = k+1;
 t = t + dt
 end
-
+save('Spline_Rel_Error_BS3BS2.mat',Spline_Area_error_rel);
 %Take spectral derivative
 % clear;
 % clc;

@@ -1,4 +1,4 @@
-function [u_new,v_new,p_new,F_new,X_new,X_tracer_new] = Peskin_IB(u,v,p,F,X,X_OG,dt,dx,dy,mu,kappa,ds,X_tracer)
+function [u_new,v_new,p_new,F_new,X_new,X_tracer_new] = Peskin_IB(u,v,p,F,X,X_tracer,dt,dx,dy,mu,kappa,ds)
 %Explict implementation of the immersed boundary method following Peskin's
 %lecture notes. 
 

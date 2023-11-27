@@ -1,4 +1,4 @@
-function [u_new,v_new,p_new,F_new,X_new] = Krylov_Peskin_IB(u,v,p,F,X,dt,dx,dy,mu,kappa,ds)
+function [u_new,v_new,p_new,F_new,X_new,X_tracer_new] = Krylov_Peskin_IB(u,v,p,F,X,X_tracer,dt,dx,dy,mu,kappa,ds)
 %Explict implementation of the immersed boundary method following Peskin's
 %lecture notes. 
 rho = 1.0;
@@ -16,7 +16,7 @@ v0 = mean(v(:));
 %  [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X,dx,dy);
 %  [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X_tracer,dx,dy);
  [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
-%  [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
+ [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u,v,X,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X_tracer,dx,dy);
@@ -30,10 +30,10 @@ X_half(:,1) = X(:,1) + 0.5.*dt.*U(:);
 X_half(:,2) = X(:,2) + 0.5.*dt.*V(:);
 X_half(:,1) = mod(X_half(:,1),cu*dx);
 X_half(:,2) = mod(X_half(:,2),rv*dy);
-% X_half_tracer(:,1) = X_tracer(:,1) + 0.5.*dt.*Utracer(:);
-% X_half_tracer(:,2) = X_tracer(:,2) + 0.5.*dt.*Vtracer(:);
-% X_half_tracer(:,1) = mod(X_half_tracer(:,1),cu*dx);
-% X_half_tracer(:,2) = mod(X_half_tracer(:,2),rv*dy);
+X_half_tracer(:,1) = X_tracer(:,1) + 0.5.*dt.*Utracer(:);
+X_half_tracer(:,2) = X_tracer(:,2) + 0.5.*dt.*Vtracer(:);
+X_half_tracer(:,1) = mod(X_half_tracer(:,1),cu*dx);
+X_half_tracer(:,2) = mod(X_half_tracer(:,2),rv*dy);
 
 %Update the forces on the Lagrangian grid
 % F_half(:,1) = -kappa*(X_half(:,1) - X_OG(:,1));
@@ -78,22 +78,29 @@ Conv_u = rho.*Conv_u;
 Conv_v = rho.*Conv_v;
 
 %Setup the first solve
-tol = 1e-9;
+tol = 1e-10;
 maxit = 500;
 %Compute the RHS of the schur complement equation
-RHS = [Conv_u(:) - ffx_half(:) - (2*rho/dt).*u(:); Conv_v(:) - ffy_half(:) - (2*rho/dt).*v(:)];
-RHSp = applyInvA(RHS, cu, ru, dx, dy, tol, maxit,rho,mu,dt);
-RHSp = applyDivergenceU(RHSp(1:cu*ru),cu,ru,dx) + applyDivergenceV(RHSp(cv*rv+1:end),cv,rv,dy);
-tol = 1e-9;
-maxit = 500;
-%Solve for the updated pressure
-p_half = gmres(@(p)applySchurComplement(p, rp, cp, dx, dy,rho,mu,dt),RHSp,[],tol,maxit);
-[Gp_halfx,Gp_halfy] = applyGradientP(p_half,cp,rp,dx,dy);
-U_half = applyInvA(-RHS - [Gp_halfx(:);Gp_halfy(:)],cu, ru, dx, dy, tol, maxit,rho,mu,dt);
-u_half = U_half(1:ru*cu);
-u_half = reshape(u_half,[ru,cu]);
-v_half = U_half(cv*rv+1:end);
-v_half = reshape(v_half,[rv,cv]);
+RHS = [-Conv_u(:) + ffx_half(:) + (2*rho/dt).*u(:); -Conv_v(:) + ffy_half(:) + (2*rho/dt).*v(:); 0.*p(:)];
+Sol = gmres(@(x)applySaddle(x,cu,ru,dx,dy,mu,rho,dt),RHS,[],1e-10,500,[],@(k)Schurcomplement_pre(k,cu,ru,dx,dy,rho,dt,mu));
+u_half = Sol(1:ru*cu);
+u_half = reshape(u_half,ru,cu);
+v_half = Sol(rv*cv+1:2*rv*cv);
+v_half = reshape(v_half,rv,cv);
+p_half = Sol(2*cv*rv+1:end);
+p_half = reshape(p_half,rp,cp);
+% RHSp = applyInvA(RHS, cu, ru, dx, dy, tol, maxit,rho,mu,dt);
+% RHSp = applyDivergenceU(RHSp(1:cu*ru),cu,ru,dx) + applyDivergenceV(RHSp(cv*rv+1:end),cv,rv,dy);
+% tol = 1e-10;
+% maxit = 500;
+% %Solve for the updated pressure
+% p_half = gmres(@(p)applySchurComplement(p, rp, cp, dx, dy,rho,mu,dt),RHSp,[],tol,maxit);
+% [Gp_halfx,Gp_halfy] = applyGradientP(p_half,cp,rp,dx,dy);
+% U_half = applyInvA(-RHS - [Gp_halfx(:);Gp_halfy(:)],cu, ru, dx, dy, tol, maxit,rho,mu,dt);
+% u_half = U_half(1:ru*cu);
+% u_half = reshape(u_half,[ru,cu]);
+% v_half = U_half(cv*rv+1:end);
+% v_half = reshape(v_half,[rv,cv]);
 
 
 % %DFIB method....
@@ -106,7 +113,7 @@ v_half = reshape(v_half,[rv,cv]);
 
 % Now again update the the lagrange points 
 [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half,dx,dy);
-% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half_tracer,dx,dy);
+[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u_half,v_half,X_half,dx,dy);
@@ -118,10 +125,10 @@ X_new(:,1) = X(:,1) + dt*U(:);
 X_new(:,2) = X(:,2) + dt*V(:);
 X_new(:,1) = mod(X_new(:,1),cu*dx);
 X_new(:,2) = mod(X_new(:,2),rv*dy);
-% X_tracer_new(:,1) = X_tracer(:,1) + dt*Utracer(:);
-% X_tracer_new(:,2) = X_tracer(:,2) + dt*Vtracer(:);
-% X_tracer_new(:,1) = mod(X_tracer_new(:,1),cu*dx);
-% X_tracer_new(:,2) = mod(X_tracer_new(:,2),rv*dy);
+X_tracer_new(:,1) = X_tracer(:,1) + dt*Utracer(:);
+X_tracer_new(:,2) = X_tracer(:,2) + dt*Vtracer(:);
+X_tracer_new(:,1) = mod(X_tracer_new(:,1),cu*dx);
+X_tracer_new(:,2) = mod(X_tracer_new(:,2),rv*dy);
 %Update the forces on the Lagrangian grid
 % F_new(:,1) = -kappa*(X_new(:,1) - X_OG(:,1));
 % F_new(:,2) = -kappa*(X_new(:,2) - X_OG(:,2));
@@ -158,17 +165,25 @@ Conv_u_half = rho.*Conv_u_half;
 Conv_v_half = rho.*Conv_v_half;
 
 
-RHS = [-(rho/dt).*u(:) - Lapu_rhs(:) + Conv_u_half(:) - ffx_new(:); -(rho/dt).*v(:) - Lapv_rhs(:) + Conv_v_half(:) - ffy_new(:)];
-RHS2 = applyInvA2(RHS, cu, ru, dx, dy, tol, maxit,rho,mu,dt);
-RHS2 = applyDivergenceU(RHS2(1:cu*ru),cu,ru,dx) + applyDivergenceV(RHS2(cv*rv+1:end),cv,rv,dy);
-p_new = gmres(@(p)applySchurComplement2(p, cp, rp, dx, dy,rho,mu,dt),RHS2,[],tol,maxit);
-[Gpnewx,Gpnewy] = applyGradientP(p_new,cp,rp,dx,dy);
-U_new = applyInvA2(-RHS - [Gpnewx(:);Gpnewy(:)], cu, ru, dx, dy, tol, maxit,rho,mu,dt);
-u_new = U_new(1:ru*(cu));
+RHS = [(rho/dt).*u(:) + Lapu_rhs(:) - Conv_u_half(:) + ffx_new(:); (rho/dt).*v(:) + Lapv_rhs(:) - Conv_v_half(:) + ffy_new(:); 0.*p(:)];
+Sol = gmres(@(x)applySaddle(x,cu,ru,dx,dy,mu,rho,dt),RHS,[],1e-10,500,[],@(k)Schurcomplement_pre(k,cu,ru,dx,dy,rho,dt,mu));
+u_new = Sol(1:ru*cu);
 u_new = reshape(u_new,ru,cu);
-v_new = U_new(ru*(cu)+1:ru*(cu)+(rv)*cv);
+v_new = Sol(rv*cv+1:2*rv*cv);
 v_new = reshape(v_new,rv,cv);
+p_new = Sol(2*cv*rv+1:end);
 p_new = reshape(p_new,rp,cp);
+
+% RHS2 = applyInvA2(RHS, cu, ru, dx, dy, tol, maxit,rho,mu,dt);
+% RHS2 = applyDivergenceU(RHS2(1:cu*ru),cu,ru,dx) + applyDivergenceV(RHS2(cv*rv+1:end),cv,rv,dy);
+% p_new = gmres(@(p)applySchurComplement2(p, cp, rp, dx, dy,rho,mu,dt),RHS2,[],tol,maxit);
+% [Gpnewx,Gpnewy] = applyGradientP(p_new,cp,rp,dx,dy);
+% U_new = applyInvA2(-RHS - [Gpnewx(:);Gpnewy(:)], cu, ru, dx, dy, tol, maxit,rho,mu,dt);
+% u_new = U_new(1:ru*(cu));
+% u_new = reshape(u_new,ru,cu);
+% v_new = U_new(ru*(cu)+1:ru*(cu)+(rv)*cv);
+% v_new = reshape(v_new,rv,cv);
+% p_new = reshape(p_new,rp,cp);
 
 end
  
@@ -181,9 +196,10 @@ end
 
     % Step 2: Combine Gpx and Gpy and apply A^-1 (Inverse of Laplacian)
     Gp_combined = [Gpx; Gpy];
-    tol = 1e-9;
+    tol = 1e-10;
     maxit = 1000;
     invAGp = applyInvA(Gp_combined, nx, ny, dx, dy, tol, maxit,rho,mu,dt);
+
     % Split the result back into u and v components
     invAGpx = invAGp(1:nx*ny);
     invAGpy = invAGp(nx*ny+1:end);
@@ -205,7 +221,7 @@ end
 
     % Step 2: Combine Gpx and Gpy and apply A^-1 (Inverse of Laplacian)
     Gp_combined = [Gpx; Gpy];
-    tol = 1e-9;
+    tol = 1e-10;
     maxit = 1000;
     invAGp = applyInvA2(Gp_combined, nx, ny, dx, dy, tol, maxit,rho,mu,dt);
 
@@ -281,8 +297,8 @@ function x = applyInvA2(b, nx, ny, dx, dy, tol, maxit,rho,mu,dt)
 
     % Use MATLAB's pcg function to solve A*x = b
     maxit = 100;
-    tol = 1e-10;
-    [x, flag, relres, iter] = minres(@(u)applyA2(u, nx, ny, dx, dy,rho,dt,mu), b, tol, maxit,[],[]);
+    tol = 1e-9;
+    [x, flag, relres, iter] = pcg(@(u)applyA2(u, nx, ny, dx, dy,rho,dt,mu), b, tol, maxit);
     % Check if the solver converged
     if flag ~= 0
         warning('Minres did not converge. Flag: %d, Residual: %e, Iterations: %d', flag, relres, iter);
@@ -302,7 +318,7 @@ function Lu = applyA2(u, nx, ny, dx, dy,rho,dt,mu)
     Ay = (rho/dt).*vComp - 0.5*mu.*LuV;
 
     % Combine the results
-    Lu = [Ax(:); Ay(:)];
+    Lu = [Ax; Ay];
 end
 
 
@@ -320,6 +336,56 @@ function Lu = applyA(u, nx, ny, dx, dy,rho,dt,mu)
 
     % Combine the results
     Lu = [Ax; Ay];
+end
+
+function p = applyInvA2c(b,nx,ny,dx,dy,rho,dt,mu)
+    tol = 1e-9;
+    maxit = 500;
+    
+    p = pcg(@(u)applyA2c(u,nx,ny,dx,dy,rho,dt,mu),b,tol,maxit,[]);
+
+
+end
+
+function p = applyInvLap(b,nx,ny,dx,dy)
+    %x0 = generateInitialGuessWithJacobi(b, nx, ny, dx, dy, 1);
+    
+    p = pcg(@(x)applyLaplacianP(x, nx, ny, dx, dy), -b, 1e-6, 500,[],[]);
+
+end
+
+function Lp = applyLaplacianP(p,nx,ny,dx,dy)
+    % Reshape u into a 2D grid
+    U = reshape(p, [ny, nx]);
+
+    % Vectorized Laplacian with periodic boundaries
+    % Handle x-boundary (periodic)
+    Ux = [U(:, end), U, U(:, 1)]; % Extend in x-direction for periodicity
+    % Handle y-boundary (assumed to be no-slip or similar)
+    Uy = [U(end, :); U; U(1, :)]; % Duplicate first and last rows in y-direction
+
+    % Central differences in x and y directions
+    Lx = (Ux(:, 3:end) - 2*U + Ux(:, 1:end-2)) / dx^2;
+    Ly = (Uy(3:end, :) - 2*U + Uy(1:end-2, :)) / dy^2;
+
+    % Combine the Laplacian components
+    Lu = Lx + Ly;
+
+    % Flatten the result
+    Lp = -Lu(:); %Get the negative laplacian for its spectral props
+end
+
+
+function Jp = Jacobi_Lap_Pre(u,dx,dy)
+    diag_Lap = (-2/(dx*dx) - 2/(dy*dy));
+    Jp = u ./ abs(diag_Lap);
+end
+
+function Lp = applyA2c(p,nx,ny,dx,dy,rho,dt,mu)
+
+    Lp = applyLaplacianU(p,nx,ny,dx,dy);
+    Lp = (rho/dt).*p - 0.5*mu.*Lp;
+
 end
 
 function divU = applyDivergenceU(u, nx, ny, dx)
@@ -348,7 +414,97 @@ function divV = applyDivergenceV(v, nx, ny, dy)
 end
 
 
+function Su = applySaddle(x,nx,ny,dx,dy,mu,rho,dt)
+u = x(1:nx*ny);
+v = x(nx*ny+1:2*nx*ny);
+p = x(2*nx*ny+1:end);
+
+Au = applyA2([u(:);v(:)],nx, ny, dx, dy,rho,dt,mu);
+[Gpx,Gpy] = applyGradientP(p,nx,ny,dx,dy);
+
+Div = -applyDivergenceU(u,nx,ny,dx) - applyDivergenceV(v,nx,ny,dy);
+
+Su = [Au(:) + [Gpx(:);Gpy(:)];Div(:)];
 
 
+end
 
+function Schur = Schurcomplement_pre(x,nx,ny,dx,dy,rho,dt,mu)
+%This uses an approximate schur preconditioner as a right preconditioner in
+%the GMRES implementation
+U = x(1:2*nx*ny);
+p = x(2*nx*ny+1:end);
+tol = 1e-6;
+maxit = 500;
+p =  fftPreconditionedSolveLaplacian2D(p, nx, ny, dx, dy);
+p = applyA2c(p,nx,ny,dx,dy,rho,dt,mu);
+[Gpx,Gpy] = applyGradientP(p,nx,ny,dx,dy);
+U = U - [Gpx(:);Gpy(:)];
 
+U = applyInvA2(U,nx, ny, dx, dy, tol, maxit,rho,mu,dt);
+
+Schur = [U(:);p(:)];
+
+end
+
+function x_new = jacobiPreconditioner(x, b, nx, ny, dx, dy, iterations)
+    % x is the initial guess (2D matrix)
+    % b is the right-hand side vector (2D matrix)
+    % nx, ny are the number of grid points in x and y directions
+    % dx, dy are the grid spacings in x and y directions
+    % iterations is the number of Jacobi iterations to perform
+    
+    % Precompute constants
+    dx2 = dx * dx;
+    dy2 = dy * dy;
+    denom = 2 * (1/dx2 + 1/dy2);
+
+    for iter = 1:iterations
+        % Compute the update (note: using the 'old' values of x)
+        x_new = -(circshift(x, [0, -1]) + circshift(x, [0, 1])) / dx2 - ...
+                (circshift(x, [-1, 0]) + circshift(x, [1, 0])) / dy2 + ...
+                b;
+        x_new = x_new / denom;
+
+        % Copy the updated values to x for the next iteration
+        x = x_new;
+    end
+
+    % Flatten x_new to a vector for consistency with linear solvers
+    x_new = x_new(:);
+end
+
+function x_guess = generateInitialGuessWithJacobi(b, nx, ny, dx, dy, jacobiIterations)
+    % Initialize x_guess, for example, with zeros
+    x_guess = zeros(nx*ny, 1);  % or reshape if you're working with 2D matrices
+
+    % Run Jacobi iterations
+    for iter = 1:jacobiIterations
+        x_guess = jacobiPreconditioner(x_guess, b, nx, ny, dx, dy, 1);
+    end
+end
+
+function x = fftPreconditionedSolveLaplacian2D(b, nx, ny, dx, dy)
+    % Transform the right-hand side to the frequency domain
+    b_fft = fft2(reshape(b,ny,nx));
+
+    % Construct the wave numbers in both dimensions
+    kx = (2 * pi / (nx * dx)) * [0:nx/2, -nx/2+1:-1];
+    ky = (2 * pi / (ny * dy)) * [0:ny/2, -ny/2+1:-1];
+
+    % Construct a grid of wave numbers
+    [KX, KY] = meshgrid(kx, ky);
+
+    % Eigenvalues of the periodic Laplacian in the frequency domain
+    laplacian_eigenvalues = -(KX.^2 + KY.^2);
+
+    % Solve in the frequency domain
+    x_fft = b_fft ./ laplacian_eigenvalues;
+
+    % Handle the singularity at k = 0 (DC component)
+    x_fft(1,1) = 0;
+
+    % Transform the solution back to the spatial domain
+    x = ifft2(x_fft, 'symmetric'); % 'symmetric' ensures real output
+    x = x(:);
+end

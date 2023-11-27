@@ -1,4 +1,4 @@
-function [u_new,v_new,p_new,F_new,X_new] = Krylov_IB_explicit_AB2(u,v,p,u0,v0,F,X,dt,dx,dy,mu,kappa,ds)
+function [u_new,v_new,p_new,F_new,X_new,X_tracer_new] = Krylov_IB_explicit_AB2(u,v,p,u0,v0,F,X,X_tracer,dt,dx,dy,mu,kappa,ds)
 
 rho = 1.0;
 [ru,cu] = size(u);
@@ -14,7 +14,7 @@ phi = solve_for_potential(u,v,dx,dy);
 
 %interpolate the velocity onto the Eulerian grid
 [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
-% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
+[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u,v,X,dx,dy);
@@ -27,10 +27,10 @@ X_half(:,1) = X(:,1) + 0.5*dt*U(:);
 X_half(:,2) = X(:,2) + 0.5*dt*V(:);
 X_half(:,1) = mod(X_half(:,1),cu*dx);
 X_half(:,2) = mod(X_half(:,2),rv*dy);
-% X_half_tracer(:,1) = X_tracer(:,1) + 0.5.*dt.*Utracer(:);
-% X_half_tracer(:,2) = X_tracer(:,2) + 0.5.*dt.*Vtracer(:);
-% X_half_tracer(:,1) = mod(X_half_tracer(:,1),cu*dx);
-% X_half_tracer(:,2) = mod(X_half_tracer(:,2),rv*dy);
+X_half_tracer(:,1) = X_tracer(:,1) + 0.5.*dt.*Utracer(:);
+X_half_tracer(:,2) = X_tracer(:,2) + 0.5.*dt.*Vtracer(:);
+X_half_tracer(:,1) = mod(X_half_tracer(:,1),cu*dx);
+X_half_tracer(:,2) = mod(X_half_tracer(:,2),rv*dy);
 %Update the forces on the Lagrangian grid
 % F_half(:,1) = -kappa*(X_half(:,1) - X_OG(:,1));
 % F_half(:,2) = -kappa*(X_half(:,2) - X_OG(:,2));
@@ -95,12 +95,12 @@ Conv_v0 = u0_sidey.*(v0_corn(:,2:end) - v0_corn(:,1:end-1))./dx + v0.*(v0ce(2:en
 Conv_u0 = 0.5.*rho.*Conv_u0;
 Conv_v0 = 0.5.*rho.*Conv_v0;
 
-tol=1e-9;
+tol=1e-10;
 maxit=500;
 RHS = [Conv_u(:) + Conv_u0(:) + Lapu_rhs(:) + (rho/dt).*u(:) + ffx_half(:) ;...
     Conv_v(:) + Conv_v0(:) + (rho/dt).*v(:) + Lapv_rhs(:) + ffy_half(:); ...
     0.*p(:)];
-Sol = gmres(@(x)applySaddle(x,cu,ru,dx,dy,mu,rho,dt),RHS,[],1e-7,500,[],@(k)Schurcomplement_pre(k,cu,ru,dx,dy,rho,dt,mu));
+Sol = gmres(@(x)applySaddle(x,cu,ru,dx,dy,mu,rho,dt),RHS,[],1e-10,500,[],@(k)Schurcomplement_pre(k,cu,ru,dx,dy,rho,dt,mu));
 u_new = Sol(1:ru*cu);
 u_new = reshape(u_new,ru,cu);
 v_new = Sol(rv*cv+1:2*rv*cv);
@@ -129,7 +129,7 @@ p_new = reshape(p_new,rp,cp);
 % [Utracer,Vtracer] = DFIB_interp(phi,u00,v00,X_half_tracer,dx,dy);
 
 [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(0.5.*(u_new + u),0.5.*(v_new + v),X_half,dx,dy);
-% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(0.5.*(u_new + u),0.5.*(v_new + v),X_half_tracer,dx,dy);
+[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(0.5.*(u_new + u),0.5.*(v_new + v),X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(0.5.*(u_new + u),0.5.*(v_new + v),X_half,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(0.5.*(u_new + u),0.5.*(v_new + v),X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(0.5.*(u_new + u),0.5.*(v_new + v),X_half,dx,dy);
@@ -141,10 +141,10 @@ X_new(:,1) = X(:,1) + dt*U(:);
 X_new(:,2) = X(:,2) + dt*V(:);
 X_new(:,1) = mod(X_new(:,1),cu*dx);
 X_new(:,2) = mod(X_new(:,2),rv*dy);
-% X_tracer_new(:,1) = X_tracer(:,1) + dt*Utracer(:);
-% X_tracer_new(:,2) = X_tracer(:,2) + dt*Vtracer(:);
-% X_tracer_new(:,1) = mod(X_tracer_new(:,1),cu*dx);
-% X_tracer_new(:,2) = mod(X_tracer_new(:,2),rv*dy);
+X_tracer_new(:,1) = X_tracer(:,1) + dt*Utracer(:);
+X_tracer_new(:,2) = X_tracer(:,2) + dt*Vtracer(:);
+X_tracer_new(:,1) = mod(X_tracer_new(:,1),cu*dx);
+X_tracer_new(:,2) = mod(X_tracer_new(:,2),rv*dy);
 %Update the forces on the Lagrangian grid
 % F_new(:,1) = -kappa*(X_new(:,1) - X_OG(:,1));
 % F_new(:,2) = -kappa*(X_new(:,2) - X_OG(:,2));
@@ -168,7 +168,7 @@ end
 
     % Step 2: Combine Gpx and Gpy and apply A^-1 (Inverse of Laplacian)
     Gp_combined = [Gpx; Gpy];
-    tol = 1e-9;
+    tol = 1e-10;
     maxit = 1000;
     invAGp = applyInvA(Gp_combined, nx, ny, dx, dy, tol, maxit,rho,mu,dt);
 
@@ -193,7 +193,7 @@ end
 
     % Step 2: Combine Gpx and Gpy and apply A^-1 (Inverse of Laplacian)
     Gp_combined = [Gpx; Gpy];
-    tol = 1e-9;
+    tol = 1e-10;
     maxit = 1000;
     invAGp = applyInvA2(Gp_combined, nx, ny, dx, dy, tol, maxit,rho,mu,dt);
 
