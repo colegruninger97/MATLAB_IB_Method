@@ -28,13 +28,13 @@ for k = 1:NIB
     
    
    i1x = mod(Ixx(2)-1:Ixx(2)+2,ru)+1;
-   if rx(1) < 0.5
+   if rx(1) <= 0.5
        j1x = mod(Ixx(1)-2:Ixx(1)+2,cu)+1;
    else
        j1x = mod(Ixx(1)-1:Ixx(1)+3,cu)+1;
    end
    
-   if ry(2) < 0.5
+   if ry(2) <= 0.5
        i1y = mod(Iyy(2)-2:Iyy(2)+2,rv)+1;
    else
        i1y = mod(Iyy(2)-1:Iyy(2)+3,rv)+1;

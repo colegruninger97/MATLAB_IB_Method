@@ -7,15 +7,15 @@ clear;
 clc;
 %Define the initial geometry ...
 %The following grid setup is particular to the periodic case...
-N = 128;
+N = 64;
 Lx = 1.0; %Make these variables global later...
 Ly = 1.0;
 dy = Ly/N; %Mesh spacing is uniform for simplicity
 dx = dy;
 mu = 0.1;
 rho = 1.0;
-dt = Lx/(20*N);
-eta = 3*rho*dx/dt;
+dt = Lx/(4*N);
+% eta = 3*rho*dx/dt;
 x = 0:dx:Lx-dx;
 y = 0:dy:Ly-dy;
 x_c = dx/2:dx:Lx-dx/2;
@@ -73,7 +73,7 @@ X_tracer = [X_1_tracer;X_2_tracer];
 X_tracer = X_tracer';
 % X_tracer_OG = X_tracer;
 kappa = 1;
-T_final = 0.25;
+T_final = 1.0;
 F= zeros(length(X_2),2);
 uce = zeros(length(y_c),length(x_c));
 vce = uce;

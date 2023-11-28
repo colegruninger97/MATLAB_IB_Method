@@ -1,11 +1,12 @@
 %Test for interpolation functions
-N = 256;
+
+N = 128;
 dx = 1/N;
 x = 0:dx:1-dx;
 y = x;
 xc = dx/2:dx:1-dx/2;
 yc = xc;
-
+Lx = 1;
 f = @(x,y) sin(2*pi.*x).*sin(2*pi.*y);
 u_exact = @(x,y) cos(2*pi.*x).*sin(2*pi.*y);
 v_exact = @(x,y) -cos(2*pi.*y).*sin(2*pi.*x);
@@ -16,8 +17,8 @@ v_exact = @(x,y) -cos(2*pi.*y).*sin(2*pi.*x);
 fx = f(Xside,Ycent);
 fy = f(Xcent,Yside);
 fn = f(Xnode,Ynode);
-a = 0.11;
-b = 0.36;
+a = rand;
+b = rand;
 % [U,V] = interpIB6(fx,fy,[a,b],dx,dx);
 % Phi = interpIB6nodes(fn,[a,b],dx,dx);
 % Error = abs(U - f(a,b)) + abs(V-f(a,b));
@@ -26,24 +27,44 @@ b = 0.36;
 u_trial = u_exact(Xside,Ycent);
 v_trial = v_exact(Xcent,Yside);
 
+mfac = 0.5;
+r_cyl = 0.25;
+%Specify the Lagrangian mesh spacing
+ds = mfac*dx/r_cyl;
+approx = round(2*pi/ds);
+ds = 2*pi/approx;
+dX = mfac*dx;
+l = length(0:ds:2*pi-ds);
+X_1 = Lx.*(0.5.*ones(1,l) + (0.25)*cos(0:ds:2*pi-ds));
+X_2 = Lx.*(0.5.*ones(1,l) +  (0.25)*sin(0:ds:2*pi-ds));
+X = [X_1;X_2]';
+
 phi = solve_for_potential(u_trial,v_trial,dx,dx);
 [phixg,phiyg] = Ghostnodesside_periodic(phi,phi);
 uu = -(1/dx).*(phixg(3:end,2:end-1) - phixg(2:end-1,2:end-1));
 vv = (1/dx).*(phiyg(2:end-1,3:end)-phiyg(2:end-1,2:end-1));
 [U,V] = DFIB_interp(phi,0,0,[a,b],dx,dx);
+[U_spline,V_spline] = interpBS2BS1(u_trial,v_trial,X,dx,dx);
 %Compare these values to the original velocity
-Error_u = abs(u_exact(a,b)-U);
-Error_v = abs(v_exact(a,b)-V);
-Error_u
-Error_v
+Error_u = abs(u_exact(X(:,1),X(:,2))-U);
+Error_v = abs(v_exact(X(:,1),X(:,2))-V);
+Error_spline_u = abs(u_exact(X(:,1),X(:,2))-U_spline);
+Error_spline_v = abs(v_exact(X(:,1),X(:,2))-V_spline);
+% Error_u
+% Error_v
+plot(Error_spline_u);
+hold on
+plot(Error_spline_v);
+max(Error_spline_u)
+max(Error_spline_v)
 
 %%
 
-mfac = 0.01;
+mfac = 0.5;
 r_cyl = 0.25;
 %Specify the Lagrangian mesh spacing
 ds = mfac*dx/r_cyl;
-approx = round(2*pi/ds);
+approx = ceil(2*pi/ds);
 ds = 2*pi/approx;
 dX = mfac*dx;
 l = length(0:ds:2*pi-ds);
@@ -54,7 +75,7 @@ X = X';
 % F = Elastic_Laplacian(X,1,dx);
 F = uniform_normal_force_circle(X,1,ds,0.25);
 [ffx,ffy] = DFIB_spread(zeros(N,N),F,X,1,dx,dx,ds);
-[ffx_bspline,ffy_bspline] = spreadIB4(F,X,zeros(N,N),zeros(N,N),dx,dx,ds);
+[ffx_bspline,ffy_bspline] = spreadBS5BS4(F,X,zeros(N,N),zeros(N,N),dx,dx,ds);
 [ffxg,ffyg] = Ghostnodesside_periodic(ffx,ffy);
 Div = (ffxg(2:end-1,3:end)-ffxg(2:end-1,2:end-1))./dx + (ffyg(3:end,2:end-1)-ffyg(2:end-1,2:end-1))./dx;
 

@@ -29,13 +29,13 @@ for k = 1:NIB
    
    %Need to include an if statement for the Bspline2 kernel implementation
    j1x = mod(Ixx(1):Ixx(1)+1,cu) + 1;
-   if rx(2) < 0.5
+   if rx(2) <= 0.5
        i1x = mod(Ixx(2),ru) + 1;
    else
        i1x = mod(Ixx(2)+1,ru) + 1;
    end
    
-   if ry(1) < 0.5
+   if ry(1) <= 0.5
        j1y = mod(Iyy(1),cv) + 1;
    else
        j1y = mod(Iyy(1)+1,cv) + 1;

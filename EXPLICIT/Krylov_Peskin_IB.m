@@ -13,11 +13,12 @@ v0 = mean(v(:));
 % [Utracer,Vtracer] = DFIB_interp(phi,u0,v0,X_tracer,dx,dy);
 
 %interpolate the velocity onto the Lag grid
-%  [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X,dx,dy);
-%  [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X_tracer,dx,dy);
- [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
- [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
+ [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X,dx,dy);
+ [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X_tracer,dx,dy);
+%  [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
+%  [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u,v,X,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS1BS0(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpIB4(u,v,X,dx,dy);
@@ -38,13 +39,15 @@ X_half_tracer(:,2) = mod(X_half_tracer(:,2),rv*dy);
 %Update the forces on the Lagrangian grid
 % F_half(:,1) = -kappa*(X_half(:,1) - X_OG(:,1));
 % F_half(:,2) = -kappa*(X_half(:,2) - X_OG(:,2));
-F_half = Elastic_force_update(X_half,kappa,ds);
-% F_half = Elastic_Laplacian(X_half,kappa,ds);
+% F_half = Elastic_force_update(X_half,kappa,ds);
+F_half = Elastic_Laplacian(X_half,kappa,ds);
 % F_half = uniform_normal_force_circle(X_half,kappa,ds,r);
 % F_half(:,1) = -eta*U;
 % F_half(:,2) = -eta*V;
 %Spread these forces onto the Eulerian grid
-[ffx_half,ffy_half] = spreadBS3BS2(F_half,X_half,u,v,dx,dy,ds);
+% [ffx_half,ffy_half] = spreadBS3BS2(F_half,X_half,u,v,dx,dy,ds);
+[ffx_half,ffy_half] = spreadBS5BS4(F_half,X_half,u,v,dx,dy,ds);
+% [ffx_half,ffy_half] = spreadBS1BS0(F_half,X_half,u,v,dx,dy,ds);
 % [ffx_half,ffy_half] = spreadBS2BS1(F_half,X_half,u,v,dx,dy,ds);
 % [ffx_half,ffy_half] = spreadIB4(F_half,X_half,u,v,dx,dy,ds);
 
@@ -82,7 +85,7 @@ tol = 1e-10;
 maxit = 500;
 %Compute the RHS of the schur complement equation
 RHS = [-Conv_u(:) + ffx_half(:) + (2*rho/dt).*u(:); -Conv_v(:) + ffy_half(:) + (2*rho/dt).*v(:); 0.*p(:)];
-Sol = gmres(@(x)applySaddle(x,cu,ru,dx,dy,mu,rho,dt),RHS,[],1e-10,500,[],@(k)Schurcomplement_pre(k,cu,ru,dx,dy,rho,dt,mu));
+Sol = gmres(@(x)applySaddle(x,cu,ru,dx,dy,mu,rho,dt),RHS,[],tol,500,[],@(k)Schurcomplement_pre(k,cu,ru,dx,dy,rho,dt,mu));
 u_half = Sol(1:ru*cu);
 u_half = reshape(u_half,ru,cu);
 v_half = Sol(rv*cv+1:2*rv*cv);
@@ -107,16 +110,19 @@ p_half = reshape(p_half,rp,cp);
 % phi = solve_for_potential(u_half,v_half,dx,dy);
 % u0 = mean(u_half(:));
 % v0 = mean(v_half(:));
-% % [U,V] = DFIB_interp(phi,u0,v0,X_half,dx,dy);
+% [U,V] = DFIB_interp(phi,u0,v0,X_half,dx,dy);
 % [Utracer,Vtracer] = DFIB_interp(phi,u0,v0,X_half_tracer,dx,dy);
 
 
 % Now again update the the lagrange points 
-[U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half,dx,dy);
-[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half_tracer,dx,dy);
-% [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half,dx,dy);
-% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half_tracer,dx,dy);
+% [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half_tracer,dx,dy);
+[U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half,dx,dy);
+[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half_tracer,dx,dy);
+% [U,V,i1x,j1x,i1y,j1y] = interpBS4BS3(u_half,v_half,X_half,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS4BS3(u_half,v_half,X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u_half,v_half,X_half,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS1BS0(u_half,v_half,X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u_half,v_half,X_half,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS2BS1(u_half,v_half,X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpIB4(u_half,v_half,X_half,dx,dy);
@@ -132,14 +138,17 @@ X_tracer_new(:,2) = mod(X_tracer_new(:,2),rv*dy);
 %Update the forces on the Lagrangian grid
 % F_new(:,1) = -kappa*(X_new(:,1) - X_OG(:,1));
 % F_new(:,2) = -kappa*(X_new(:,2) - X_OG(:,2));
-F_new = Elastic_force_update(X_new,kappa,ds);
-% F_new = Elastic_Laplacian(X_new,kappa,ds);
+% F_new = Elastic_force_update(X_new,kappa,ds);
+F_new = Elastic_Laplacian(X_new,kappa,ds);
 % F_new = uniform_normal_force_circle(X_new,kappa,ds,r);
 % F_new(:,1) = -eta*U;
 % F_new(:,2) = -eta*V;
 
 %Spread these forces to the Eulerian grid
-[ffx_new,ffy_new] = spreadBS3BS2(F_new,X_new,u_half,v_half,dx,dy,ds);
+% [ffx_new,ffy_new] = spreadBS3BS2(F_new,X_new,u_half,v_half,dx,dy,ds);
+[ffx_new,ffy_new] = spreadBS5BS4(F_new,X_new,u_half,v_half,dx,dy,ds);
+% [ffx_new,ffy_new] = spreadBS4BS3(F_new,X_new,u_half,v_half,dx,dy,ds);
+% [ffx_new,ffy_new] = spreadBS1BS0(F_new,X_new,u_half,v_half,dx,dy,ds);
 % [ffx_new,ffy_new] = spreadBS2BS1(F_new,X_new,u_half,v_half,dx,dy,ds);
 % [ffx_new,ffy_new] = spreadIB4(F_new,X_new,u_half,v_half,dx,dy,ds);
 
@@ -297,7 +306,7 @@ function x = applyInvA2(b, nx, ny, dx, dy, tol, maxit,rho,mu,dt)
 
     % Use MATLAB's pcg function to solve A*x = b
     maxit = 100;
-    tol = 1e-9;
+    tol = 1e-10;
     [x, flag, relres, iter] = pcg(@(u)applyA2(u, nx, ny, dx, dy,rho,dt,mu), b, tol, maxit);
     % Check if the solver converged
     if flag ~= 0
@@ -339,7 +348,7 @@ function Lu = applyA(u, nx, ny, dx, dy,rho,dt,mu)
 end
 
 function p = applyInvA2c(b,nx,ny,dx,dy,rho,dt,mu)
-    tol = 1e-9;
+    tol = 1e-10;
     maxit = 500;
     
     p = pcg(@(u)applyA2c(u,nx,ny,dx,dy,rho,dt,mu),b,tol,maxit,[]);
@@ -434,7 +443,7 @@ function Schur = Schurcomplement_pre(x,nx,ny,dx,dy,rho,dt,mu)
 %the GMRES implementation
 U = x(1:2*nx*ny);
 p = x(2*nx*ny+1:end);
-tol = 1e-6;
+tol = 1e-10;
 maxit = 500;
 p =  fftPreconditionedSolveLaplacian2D(p, nx, ny, dx, dy);
 p = applyA2c(p,nx,ny,dx,dy,rho,dt,mu);

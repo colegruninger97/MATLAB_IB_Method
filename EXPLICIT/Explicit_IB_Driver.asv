@@ -7,15 +7,15 @@ clear;
 clc;
 %Define the initial geometry ...
 %The following grid setup is particular to the periodic case...
-N = 32;
+N = 64;
 Lx = 1.0; %Make these variables global later...
 Ly = 1.0;
 dy = Ly/N; %Mesh spacing is uniform for simplicity
 dx = dy;
 mu = 0.1;
 rho = 1.0;
-dt = Lx/(20*N);
-eta = 3*rho*dx/dt;
+dt = Lx/(4*N);
+% eta = 3*rho*dx/dt;
 x = 0:dx:Lx-dx;
 y = 0:dy:Ly-dy;
 x_c = dx/2:dx:Lx-dx/2;
@@ -55,14 +55,15 @@ dX = mfac*dx;
 l = length(0:ds:2*pi-ds);
 X_1 = Lx.*(0.5.*ones(1,l) + (0.25)*cos(0:ds:2*pi-ds));
 X_2 = Lx.*(0.5.*ones(1,l) +  (0.25)*sin(0:ds:2*pi-ds));
+X = [X_1;X_2]';
 % X_1 = Ly/4:dX:3*Ly/4;
 % 
 % X_2 = Lx/2.*ones(1,length(X_1));
 % X_1 = 0.5;
 % X_2 = 0.5;
-X_OG = [X_1;X_2];
-X_OG = X_OG';
-X = X_OG;
+% X_OG = [X_1;X_2];
+% X_OG = X_OG';
+% X = X_OG;
 NIB = length(X_2);
 N_IB_tracer = 20*NIB;
 ds_tracer = 2*pi/N_IB_tracer;
@@ -72,12 +73,12 @@ X_tracer = [X_1_tracer;X_2_tracer];
 X_tracer = X_tracer';
 % X_tracer_OG = X_tracer;
 kappa = 1;
-T_final = 5;
+T_final = 1.0;
 F= zeros(length(X_2),2);
 uce = zeros(length(y_c),length(x_c));
 vce = uce;
 t = 0;
-Init_Poly_area = polyarea(
+Init_Poly_area = polyarea(X(:,1),X(:,2));
 
 %Take an initial timestep using Peskin's IB method
 [u,v,p,F,X,X_tracer] = Krylov_Peskin_IB(u,v,p,F,X,X_tracer,dt,dx,dy,mu,kappa,ds);
@@ -90,6 +91,8 @@ pp2_deriv = pp_deriv(pp2);
 pp_mult = pp_multiply(pp1,pp2_deriv);
 Spline_Area = intpp(pp_mult);
 Spline_Area_error_rel(1) = abs(Spline_Area - pi*0.25*0.25)./(0.25*0.25*pi);
+
+Rel_Poly_Area_error(1) = abs(polyarea(X(:,1),X(:,2)) - Init_Poly_area)/Init_Poly_area;
 
 
 %I might want to instead try solving for the Schur complement
@@ -113,6 +116,9 @@ spline_mult = pp_multiply(pp1,pp2_deriv);
 Spline_Area = intpp(spline_mult);
 Spline_Area_error_abs(k) = abs(Spline_Area - r_cyl*r_cyl*pi);
 Spline_Area_error_rel(k) = Spline_Area_error_abs(k)./r_cyl*r_cyl*pi;
+
+Rel_Poly_Area_error(k) = abs(polyarea(X(:,1),X(:,2)) - Init_Poly_area)/Init_Poly_area;
+
 
 %  du = (u(:,2:end)-u(:,1:end-1))./dx;
 %  dv = (v(2:end,:)-v(1:end-1,:))./dy;
@@ -171,7 +177,8 @@ pause(0)
 k = k+1;
 t = t + dt
 end
-save('Spline_Rel_Error_BS3BS2.mat',Spline_Area_error_rel);
+save('Spline_Rel_Error_BS3BS2.mat','Spline_Area_error_rel');
+save('Rel_Poly_Area_Error_BS3BS2.mat','Rel_Poly_Area_error');
 %Take spectral derivative
 % clear;
 % clc;

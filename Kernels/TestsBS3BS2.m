@@ -7,7 +7,7 @@ clc;
 u_b = @(x,y) sin(2*pi.*x+2).*sin(2*pi.*y+4);
 v_b = @(x,y) cos(2*pi.*x+2).*cos(2*pi.*y+4);
 
-N = 64;
+N = 128;
 dx = 1/N;
 dy = dx;
 
@@ -78,19 +78,19 @@ Iyy = floor([sy]);
 rx = sx-Ixx;
 ry = sy-Iyy;
 
-   j1x = mod(Ixx(1)-1:Ixx(1)+2,64)+1;
+   j1x = mod(Ixx(1)-1:Ixx(1)+2,N)+1;
    
    if rx(2) < 0.5
-       i1x = mod(Ixx(2)-1:Ixx(2)+1,64)+1;
+       i1x = mod(Ixx(2)-1:Ixx(2)+1,N)+1;
    else
-       i1x = mod(Ixx(2):Ixx(2)+2,64)+1;
+       i1x = mod(Ixx(2):Ixx(2)+2,N)+1;
    end
    
-   i1y = mod(Iyy(2)-1:Iyy(2)+2,64)+1;
+   i1y = mod(Iyy(2)-1:Iyy(2)+2,N)+1;
    if ry(1) < 0.5
-       j1y = mod(Iyy(1)-1:Iyy(1)+1,64)+1;
+       j1y = mod(Iyy(1)-1:Iyy(1)+1,N)+1;
    else
-       j1y = mod(Iyy(1):Iyy(1)+2,64)+1;
+       j1y = mod(Iyy(1):Iyy(1)+2,N)+1;
    end
    
    %get the weights
