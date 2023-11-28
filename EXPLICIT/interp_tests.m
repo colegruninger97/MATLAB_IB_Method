@@ -1,6 +1,6 @@
 %Test for interpolation functions
 
-N = 128;
+N = 64;
 dx = 1/N;
 x = 0:dx:1-dx;
 y = x;
@@ -75,7 +75,7 @@ X = X';
 % F = Elastic_Laplacian(X,1,dx);
 F = uniform_normal_force_circle(X,1,ds,0.25);
 [ffx,ffy] = DFIB_spread(zeros(N,N),F,X,1,dx,dx,ds);
-[ffx_bspline,ffy_bspline] = spreadBS5BS4(F,X,zeros(N,N),zeros(N,N),dx,dx,ds);
+[ffx_bspline,ffy_bspline] = spreadBS2BS1(F,X,zeros(N,N),zeros(N,N),dx,dx,ds);
 [ffxg,ffyg] = Ghostnodesside_periodic(ffx,ffy);
 Div = (ffxg(2:end-1,3:end)-ffxg(2:end-1,2:end-1))./dx + (ffyg(3:end,2:end-1)-ffyg(2:end-1,2:end-1))./dx;
 

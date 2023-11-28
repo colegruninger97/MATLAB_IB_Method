@@ -13,10 +13,10 @@ v00 = mean(v(:));
 
 
 %interpolate the velocity onto the Eulerian grid
-% [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
-% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
-[U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X,dx,dy);
-[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X_tracer,dx,dy);
+[U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
+[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
+% [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u,v,X,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS1BS0(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X,dx,dy);
@@ -43,8 +43,8 @@ X_half_tracer(:,2) = mod(X_half_tracer(:,2),rv*dy);
 F_half = Elastic_Laplacian(X_half,kappa,ds);
 % F_half = uniform_normal_force_circle(X_half,kappa,ds,r);
 %Spread these forces onto the Eulerian grid
-% [ffx_half,ffy_half] = spreadBS3BS2(F_half,X_half,u,v,dx,dy,ds);
-[ffx_half,ffy_half] = spreadBS5BS4(F_half,X_half,u,v,dx,dy,ds);
+[ffx_half,ffy_half] = spreadBS3BS2(F_half,X_half,u,v,dx,dy,ds);
+% [ffx_half,ffy_half] = spreadBS5BS4(F_half,X_half,u,v,dx,dy,ds);
 % [ffx_half,ffy_half] = spreadBS2BS1(F_half,X_half,u,v,dx,dy,ds);
 % [ffx_half,ffy_half] = spreadBS4BS3(F_half,X_half,u,v,dx,dy,ds);
 % [ffx_half,ffy_half] = spreadBS1BS0(F_half,X_half,u,v,dx,dy,ds);

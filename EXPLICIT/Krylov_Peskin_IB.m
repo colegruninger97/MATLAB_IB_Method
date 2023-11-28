@@ -13,14 +13,16 @@ v0 = mean(v(:));
 % [Utracer,Vtracer] = DFIB_interp(phi,u0,v0,X_tracer,dx,dy);
 
 %interpolate the velocity onto the Lag grid
- [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X,dx,dy);
- [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X_tracer,dx,dy);
-%  [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
-%  [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
+%  [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X,dx,dy);
+%  [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u,v,X_tracer,dx,dy);
+ [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X,dx,dy);
+ [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u,v,X,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS1BS0(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS2BS1(u,v,X_tracer,dx,dy);
+% [U,V,i1x,j1x,i1y,j1y] = interpBS4BS3(u,v,X,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS4BS3(u,v,X_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpIB4(u,v,X,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpIB4(u,v,X_tracer,dx,dy);
 
@@ -45,10 +47,11 @@ F_half = Elastic_Laplacian(X_half,kappa,ds);
 % F_half(:,1) = -eta*U;
 % F_half(:,2) = -eta*V;
 %Spread these forces onto the Eulerian grid
-% [ffx_half,ffy_half] = spreadBS3BS2(F_half,X_half,u,v,dx,dy,ds);
-[ffx_half,ffy_half] = spreadBS5BS4(F_half,X_half,u,v,dx,dy,ds);
+[ffx_half,ffy_half] = spreadBS3BS2(F_half,X_half,u,v,dx,dy,ds);
+% [ffx_half,ffy_half] = spreadBS5BS4(F_half,X_half,u,v,dx,dy,ds);
 % [ffx_half,ffy_half] = spreadBS1BS0(F_half,X_half,u,v,dx,dy,ds);
 % [ffx_half,ffy_half] = spreadBS2BS1(F_half,X_half,u,v,dx,dy,ds);
+% [ffx_half,ffy_half] = spreadBS4BS3(F_half,X_half,u,v,dx,dy,ds);
 % [ffx_half,ffy_half] = spreadIB4(F_half,X_half,u,v,dx,dy,ds);
 
 Vol = 1.0; %is the volume of the unit torus. need to change is domain is changed.
@@ -115,10 +118,10 @@ p_half = reshape(p_half,rp,cp);
 
 
 % Now again update the the lagrange points 
-% [U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half,dx,dy);
-% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half_tracer,dx,dy);
-[U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half,dx,dy);
-[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half_tracer,dx,dy);
+[U,V,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half,dx,dy);
+[Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS3BS2(u_half,v_half,X_half_tracer,dx,dy);
+% [U,V,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half,dx,dy);
+% [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS5BS4(u_half,v_half,X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS4BS3(u_half,v_half,X_half,dx,dy);
 % [Utracer,Vtracer,i1x,j1x,i1y,j1y] = interpBS4BS3(u_half,v_half,X_half_tracer,dx,dy);
 % [U,V,i1x,j1x,i1y,j1y] = interpBS1BS0(u_half,v_half,X_half,dx,dy);
@@ -145,8 +148,8 @@ F_new = Elastic_Laplacian(X_new,kappa,ds);
 % F_new(:,2) = -eta*V;
 
 %Spread these forces to the Eulerian grid
-% [ffx_new,ffy_new] = spreadBS3BS2(F_new,X_new,u_half,v_half,dx,dy,ds);
-[ffx_new,ffy_new] = spreadBS5BS4(F_new,X_new,u_half,v_half,dx,dy,ds);
+[ffx_new,ffy_new] = spreadBS3BS2(F_new,X_new,u_half,v_half,dx,dy,ds);
+% [ffx_new,ffy_new] = spreadBS5BS4(F_new,X_new,u_half,v_half,dx,dy,ds);
 % [ffx_new,ffy_new] = spreadBS4BS3(F_new,X_new,u_half,v_half,dx,dy,ds);
 % [ffx_new,ffy_new] = spreadBS1BS0(F_new,X_new,u_half,v_half,dx,dy,ds);
 % [ffx_new,ffy_new] = spreadBS2BS1(F_new,X_new,u_half,v_half,dx,dy,ds);
